@@ -53,7 +53,7 @@ export function createInitialState() {
     showAssetMenu: false,
     showAchievements: false,
     achievementQueue: [],
-    loanSharkMessage: null,
+    loanSharkQueue: [],
     muted: false,
   }
 }

@@ -17,6 +17,7 @@ export const TOGGLE_ASSET_MENU = 'TOGGLE_ASSET_MENU'
 export const TOGGLE_ACHIEVEMENTS = 'TOGGLE_ACHIEVEMENTS'
 export const DISMISS_ACHIEVEMENT = 'DISMISS_ACHIEVEMENT'
 export const DISMISS_LOAN_SHARK = 'DISMISS_LOAN_SHARK'
+export const SET_LOAN_SHARK_MESSAGE = 'SET_LOAN_SHARK_MESSAGE'
 export const UNLOCK_ACHIEVEMENT = 'UNLOCK_ACHIEVEMENT'
 export const REMOVE_ASSET = 'REMOVE_ASSET'
 export const TOGGLE_MUTE = 'TOGGLE_MUTE'
@@ -37,4 +38,9 @@ export const setDealerMessage = (message, shownDealerLines) => ({
   type: SET_DEALER_MESSAGE,
   message,
   shownDealerLines,
+})
+export const setLoanSharkMessage = (messages, seenThresholds) => ({
+  type: SET_LOAN_SHARK_MESSAGE,
+  messages,
+  seenThresholds,
 })

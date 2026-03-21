@@ -1,0 +1,58 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  animation: fadeIn 0.3s ease-out both;
+  cursor: pointer;
+}
+
+.popup {
+  background: linear-gradient(135deg, #3a0a0a, #1a0505);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  border-radius: 12px;
+  padding: 24px 28px;
+  max-width: 320px;
+  width: calc(100% - 48px);
+  text-align: center;
+  box-shadow:
+    0 0 30px rgba(231, 76, 60, 0.3),
+    0 0 60px rgba(231, 76, 60, 0.1);
+  animation: loanSharkSlideIn 0.4s ease-out both;
+}
+
+.message {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary, #e8e0d0);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.dismiss {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: rgba(232, 224, 208, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+@keyframes loanSharkSlideIn {
+  0% {
+    transform: translateY(-20px) scale(0.95);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}

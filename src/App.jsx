@@ -4,10 +4,11 @@ import { createInitialState } from './reducer/initialState'
 import {
   addChip, selectChip, deal, hit, doubleDown, betAsset, removeAsset,
   UNDO_CHIP, CLEAR_CHIPS, ALL_IN, STAND, NEW_ROUND, RESET_GAME,
-  TOGGLE_ASSET_MENU,
+  TOGGLE_ASSET_MENU, DISMISS_LOAN_SHARK,
 } from './reducer/actions'
 import { useDealerTurn } from './hooks/useDealerTurn'
 import { useDealerMessage } from './hooks/useDealerMessage'
+import { useLoanShark } from './hooks/useLoanShark'
 import Header from './components/Header'
 import BankrollDisplay from './components/BankrollDisplay'
 import DealerArea from './components/DealerArea'
@@ -16,6 +17,7 @@ import BettingCircle from './components/BettingCircle'
 import BettingControls from './components/BettingControls'
 import ActionButtons from './components/ActionButtons'
 import ResultBanner from './components/ResultBanner'
+import LoanSharkPopup from './components/LoanSharkPopup'
 import styles from './App.module.css'
 
 function App() {
@@ -26,6 +28,7 @@ function App() {
   // Dealer turn automation
   useDealerTurn(state, dispatch)
   useDealerMessage(state, dispatch)
+  useLoanShark(state, dispatch)
 
   // Draw cards from deck (component picks, reducer processes)
   const drawCards = (count) => stateRef.current.deck.slice(0, count)
@@ -63,6 +66,7 @@ function App() {
   const handleBetAsset = (asset) => dispatch(betAsset(asset))
   const handleRemoveAsset = (assetId) => dispatch(removeAsset(assetId))
   const handleToggleAssetMenu = () => dispatch({ type: TOGGLE_ASSET_MENU })
+  const handleDismissLoanShark = () => dispatch({ type: DISMISS_LOAN_SHARK })
 
   // --- Derived state ---
   const canDoubleDown =
@@ -130,6 +134,11 @@ function App() {
           />
         )}
       </div>
+
+      <LoanSharkPopup
+        message={state.loanSharkQueue[0] || null}
+        onDismiss={handleDismissLoanShark}
+      />
     </div>
   )
 }

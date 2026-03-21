@@ -4,7 +4,7 @@ import {
   RESOLVE_HAND, NEW_ROUND, RESET_GAME,
   TOGGLE_ASSET_MENU, TOGGLE_ACHIEVEMENTS,
   DISMISS_ACHIEVEMENT, DISMISS_LOAN_SHARK, UNLOCK_ACHIEVEMENT,
-  TOGGLE_MUTE, SET_DEALER_MESSAGE,
+  TOGGLE_MUTE, SET_DEALER_MESSAGE, SET_LOAN_SHARK_MESSAGE,
 } from './actions'
 import { createInitialState } from './initialState'
 import { CHIPS } from '../constants/chips'
@@ -273,7 +273,15 @@ export function gameReducer(state, action) {
     }
 
     case DISMISS_LOAN_SHARK: {
-      return { ...state, loanSharkMessage: null }
+      return { ...state, loanSharkQueue: state.loanSharkQueue.slice(1) }
+    }
+
+    case SET_LOAN_SHARK_MESSAGE: {
+      return {
+        ...state,
+        loanSharkQueue: [...state.loanSharkQueue, ...action.messages],
+        seenLoanThresholds: action.seenThresholds,
+      }
     }
 
     case UNLOCK_ACHIEVEMENT: {
