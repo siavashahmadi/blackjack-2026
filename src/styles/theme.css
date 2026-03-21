@@ -1,0 +1,122 @@
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@900&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+/* ===== Color Palette (Section 4.2) ===== */
+:root {
+  --felt-dark:        #0c200c;
+  --felt-mid:         #143a14;
+  --felt-light:       #1a5a1a;
+  --felt-highlight:   #2a7a2a;
+  --felt-texture:     #1e4e1e;
+
+  --gold:             #f0c850;
+  --gold-dim:         #d4a832;
+  --gold-glow:        rgba(240, 200, 80, 0.3);
+
+  --card-white:       #f5f0e8;
+  --card-red:         #cc3333;
+  --card-black:       #1a1a2e;
+
+  --danger:           #e74c3c;
+  --danger-glow:      rgba(231, 76, 60, 0.4);
+  --success:          #27ae60;
+
+  --text-primary:     #e8e0d0;
+  --text-dim:         rgba(232, 224, 208, 0.5);
+  --surface:          rgba(0, 0, 0, 0.25);
+}
+
+/* ===== CSS Reset & Base ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== Felt Texture Background (Section 4.3) ===== */
+
+/* SVG noise filter for felt grain */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    /* Spotlight: radial gradient, lighter center, darker edges */
+    radial-gradient(
+      ellipse 80% 60% at 50% 40%,
+      var(--felt-light) 0%,
+      var(--felt-mid) 40%,
+      var(--felt-dark) 100%
+    );
+}
+
+/* Felt grain/noise texture overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.12;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  pointer-events: none;
+}
+
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--felt-dark);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ===== Typography ===== */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* ===== Utility ===== */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+}
