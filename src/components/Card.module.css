@@ -1,0 +1,137 @@
+/* ===== Card Component Styles ===== */
+
+.card {
+  position: relative;
+  width: 75px;
+  height: 109px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ===== Card Face (front) ===== */
+.face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--card-white) 0%, #ede7d9 100%);
+  border-radius: 10px;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px 6px;
+  overflow: hidden;
+}
+
+/* ===== Card Back ===== */
+.back {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, #1a1a4e 0%, #0d0d2b 50%, #1a1a4e 100%);
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 4px rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+/* Decorative diamond pattern on card back */
+.back::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 4px;
+  opacity: 0.12;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 8px,
+      rgba(255, 255, 255, 0.4) 8px,
+      rgba(255, 255, 255, 0.4) 9px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 8px,
+      rgba(255, 255, 255, 0.4) 8px,
+      rgba(255, 255, 255, 0.4) 9px
+    );
+  pointer-events: none;
+}
+
+/* ===== Corner Labels ===== */
+.cornerTopLeft,
+.cornerBottomRight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.cornerBottomRight {
+  align-self: flex-end;
+  transform: rotate(180deg);
+}
+
+.rank {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.suitSmall {
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* ===== Center Suit ===== */
+.centerSuit {
+  font-size: 34px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.85;
+  line-height: 1;
+}
+
+/* ===== Suit Color Modifiers ===== */
+.red {
+  color: var(--card-red);
+}
+
+.black {
+  color: var(--card-black);
+}
+
+/* ===== Deal Animation ===== */
+.dealing {
+  animation: cardDeal 0.4s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* ===== Responsive: Small Screens ===== */
+@media (max-width: 374px) {
+  .card {
+    width: 60px;
+    height: 87px;
+  }
+
+  .rank {
+    font-size: 15px;
+  }
+
+  .suitSmall {
+    font-size: 10px;
+  }
+
+  .centerSuit {
+    font-size: 28px;
+  }
+}

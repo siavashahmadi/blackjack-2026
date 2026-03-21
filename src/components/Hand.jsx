@@ -1,0 +1,39 @@
+import Card from './Card'
+import styles from './Hand.module.css'
+
+function getCardMargin(cardCount, cardIndex) {
+  if (cardIndex === 0) return 0
+  if (cardCount <= 2) return 10
+  if (cardCount === 3) return 0
+  if (cardCount === 4) return -15
+  if (cardCount === 5) return -25
+  return -35
+}
+
+function Hand({ cards = [], hideFirst = false, animate = true }) {
+  const cardCount = cards.length
+
+  return (
+    <div className={styles.hand}>
+      {cards.map((card, i) => (
+        <div
+          key={card.id}
+          className={styles.handCard}
+          style={{
+            marginLeft: getCardMargin(cardCount, i),
+            zIndex: i,
+          }}
+        >
+          <Card
+            card={card}
+            faceDown={hideFirst && i === 0}
+            index={i}
+            animate={animate}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export default Hand
