@@ -9,7 +9,15 @@ const RESULT_CONFIG = {
   push: { text: 'PUSH', colorClass: 'dim' },
 }
 
-function ResultBanner({ result, onNextHand }) {
+function getNextHandText(bankroll) {
+  if (bankroll < -1000000) return 'THIS IS FINE'
+  if (bankroll < -100000) return 'ONE MORE. JUST ONE MORE.'
+  if (bankroll < -10000) return 'KEEP DIGGING'
+  if (bankroll <= 0) return 'BET AGAIN (WHY NOT)'
+  return 'NEXT HAND'
+}
+
+function ResultBanner({ result, bankroll, onNextHand }) {
   const config = RESULT_CONFIG[result]
   if (!config) return null
 
@@ -19,7 +27,7 @@ function ResultBanner({ result, onNextHand }) {
         {config.text}
       </span>
       <button className={styles.nextButton} onClick={onNextHand}>
-        NEXT HAND
+        {getNextHandText(bankroll)}
       </button>
     </div>
   )

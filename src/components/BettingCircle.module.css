@@ -66,6 +66,38 @@
   color: var(--gold);
 }
 
+.assetChips {
+  position: relative;
+  width: 36px;
+  height: 36px;
+}
+
+.assetChip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 10px var(--gold-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  animation: chipBounce 0.3s ease-out both;
+}
+
+.assetChip:active {
+  transform: translate(-50%, -50%) scale(0.9) !important;
+}
+
+.assetEmoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
 @media (max-width: 374px) {
   .circle {
     width: 100px;

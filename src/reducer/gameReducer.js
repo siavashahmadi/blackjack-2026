@@ -1,6 +1,6 @@
 import {
   ADD_CHIP, UNDO_CHIP, CLEAR_CHIPS, SELECT_CHIP, ALL_IN,
-  DEAL, BET_ASSET, HIT, STAND, DOUBLE_DOWN, DEALER_DRAW,
+  DEAL, BET_ASSET, REMOVE_ASSET, HIT, STAND, DOUBLE_DOWN, DEALER_DRAW,
   RESOLVE_HAND, NEW_ROUND, RESET_GAME,
   TOGGLE_ASSET_MENU, TOGGLE_ACHIEVEMENTS,
   DISMISS_ACHIEVEMENT, DISMISS_LOAN_SHARK, UNLOCK_ACHIEVEMENT,
@@ -107,6 +107,18 @@ export function gameReducer(state, action) {
         ...state,
         bettedAssets: [...state.bettedAssets, action.asset],
         ownedAssets: { ...state.ownedAssets, [action.asset.id]: false },
+      }
+    }
+
+    case REMOVE_ASSET: {
+      if (state.phase !== 'betting' && state.phase !== 'playing') return state
+      const asset = state.bettedAssets.find(a => a.id === action.assetId)
+      if (!asset) return state
+
+      return {
+        ...state,
+        bettedAssets: state.bettedAssets.filter(a => a.id !== action.assetId),
+        ownedAssets: { ...state.ownedAssets, [action.assetId]: true },
       }
     }
 

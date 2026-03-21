@@ -6,9 +6,11 @@ import styles from './BettingCircle.module.css'
 
 const CHIP_MAP = Object.fromEntries(CHIPS.map(c => [c.value, c]))
 
-function BettingCircle({ chipStack = [], onUndo }) {
-  const total = chipStack.reduce((sum, v) => sum + v, 0)
-  const isEmpty = chipStack.length === 0
+function BettingCircle({ chipStack = [], bettedAssets = [], onUndo, onRemoveAsset }) {
+  const chipTotal = chipStack.reduce((sum, v) => sum + v, 0)
+  const assetTotal = bettedAssets.reduce((sum, a) => sum + a.value, 0)
+  const total = chipTotal + assetTotal
+  const isEmpty = chipStack.length === 0 && bettedAssets.length === 0
   const visibleChips = chipStack.slice(-MAX_VISUAL_CHIPS)
   const overflowCount = chipStack.length > MAX_VISUAL_CHIPS ? chipStack.length : 0
 
@@ -22,7 +24,7 @@ function BettingCircle({ chipStack = [], onUndo }) {
           <div className={styles.chipStack}>
             {visibleChips.map((value, i) => {
               const chip = CHIP_MAP[value] || CHIPS[0]
-              const isLast = i === visibleChips.length - 1
+              const isLast = i === visibleChips.length - 1 && bettedAssets.length === 0
               return (
                 <div
                   key={`${i}-${value}`}
@@ -39,6 +41,29 @@ function BettingCircle({ chipStack = [], onUndo }) {
                     size="stack"
                     animate={isLast}
                   />
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {bettedAssets.length > 0 && (
+          <div className={styles.assetChips}>
+            {bettedAssets.map((asset, i) => {
+              const baseOffset = visibleChips.length
+              return (
+                <div
+                  key={asset.id}
+                  className={styles.assetChip}
+                  style={{
+                    transform: `translate(-50%, -50%) translate(${baseOffset + i}px, ${-(baseOffset + i) * 3}px)`,
+                    zIndex: baseOffset + i + 1,
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRemoveAsset(asset.id)
+                  }}
+                >
+                  <span className={styles.assetEmoji}>{asset.emoji}</span>
                 </div>
               )
             })}

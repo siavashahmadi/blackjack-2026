@@ -1,19 +1,31 @@
 import { MIN_BET } from '../constants/gameConfig'
 import ChipTray from './ChipTray'
+import AssetBetting from './AssetBetting'
 import styles from './BettingControls.module.css'
 
 function BettingControls({
   bankroll,
   selectedChipValue,
   chipStack,
+  ownedAssets,
+  bettedAssets,
+  showAssetMenu,
   onChipTap,
   onUndo,
   onClear,
   onAllIn,
   onDeal,
+  onBetAsset,
+  onToggleAssetMenu,
 }) {
   const total = chipStack.reduce((sum, v) => sum + v, 0)
   const canDeal = total >= MIN_BET
+
+  const dealClasses = [
+    styles.dealButton,
+    !canDeal ? styles.disabled : '',
+    bankroll < -10000 ? styles.wobble : '',
+  ].filter(Boolean).join(' ')
 
   return (
     <div className={styles.controls}>
@@ -41,8 +53,16 @@ function BettingControls({
           ALL IN
         </button>
       </div>
+      <AssetBetting
+        bankroll={bankroll}
+        ownedAssets={ownedAssets}
+        bettedAssets={bettedAssets}
+        onBetAsset={onBetAsset}
+        showAssetMenu={showAssetMenu}
+        onToggleAssetMenu={onToggleAssetMenu}
+      />
       <button
-        className={`${styles.dealButton}${!canDeal ? ` ${styles.disabled}` : ''}`}
+        className={dealClasses}
         onClick={canDeal ? onDeal : undefined}
       >
         DEAL

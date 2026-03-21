@@ -2,8 +2,9 @@ import { useReducer, useRef } from 'react'
 import { gameReducer } from './reducer/gameReducer'
 import { createInitialState } from './reducer/initialState'
 import {
-  addChip, selectChip, deal, hit, doubleDown,
+  addChip, selectChip, deal, hit, doubleDown, betAsset, removeAsset,
   UNDO_CHIP, CLEAR_CHIPS, ALL_IN, STAND, NEW_ROUND, RESET_GAME,
+  TOGGLE_ASSET_MENU,
 } from './reducer/actions'
 import { useDealerTurn } from './hooks/useDealerTurn'
 import Header from './components/Header'
@@ -57,6 +58,10 @@ function App() {
   const handleNewRound = () => dispatch({ type: NEW_ROUND })
   const handleReset = () => dispatch({ type: RESET_GAME })
 
+  const handleBetAsset = (asset) => dispatch(betAsset(asset))
+  const handleRemoveAsset = (assetId) => dispatch(removeAsset(assetId))
+  const handleToggleAssetMenu = () => dispatch({ type: TOGGLE_ASSET_MENU })
+
   // --- Derived state ---
   const canDoubleDown =
     state.phase === 'playing' &&
@@ -67,7 +72,7 @@ function App() {
 
   return (
     <div className={styles.app}>
-      <Header onReset={handleReset} />
+      <Header bankroll={state.bankroll} onReset={handleReset} />
       <BankrollDisplay bankroll={state.bankroll} />
 
       <div className={styles.table}>
@@ -78,7 +83,9 @@ function App() {
         />
         <BettingCircle
           chipStack={state.chipStack}
+          bettedAssets={state.bettedAssets}
           onUndo={handleUndo}
+          onRemoveAsset={handleRemoveAsset}
         />
         <PlayerArea hand={state.playerHand} />
       </div>
@@ -89,11 +96,16 @@ function App() {
             bankroll={state.bankroll}
             selectedChipValue={state.selectedChipValue}
             chipStack={state.chipStack}
+            ownedAssets={state.ownedAssets}
+            bettedAssets={state.bettedAssets}
+            showAssetMenu={state.showAssetMenu}
             onChipTap={handleChipTap}
             onUndo={handleUndo}
             onClear={handleClear}
             onAllIn={handleAllIn}
             onDeal={handleDeal}
+            onBetAsset={handleBetAsset}
+            onToggleAssetMenu={handleToggleAssetMenu}
           />
         )}
         {state.phase === 'playing' && (
@@ -110,6 +122,7 @@ function App() {
         {state.phase === 'result' && (
           <ResultBanner
             result={state.result}
+            bankroll={state.bankroll}
             onNextHand={handleNewRound}
           />
         )}

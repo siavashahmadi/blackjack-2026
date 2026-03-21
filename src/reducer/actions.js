@@ -18,6 +18,7 @@ export const TOGGLE_ACHIEVEMENTS = 'TOGGLE_ACHIEVEMENTS'
 export const DISMISS_ACHIEVEMENT = 'DISMISS_ACHIEVEMENT'
 export const DISMISS_LOAN_SHARK = 'DISMISS_LOAN_SHARK'
 export const UNLOCK_ACHIEVEMENT = 'UNLOCK_ACHIEVEMENT'
+export const REMOVE_ASSET = 'REMOVE_ASSET'
 export const TOGGLE_MUTE = 'TOGGLE_MUTE'
 
 // Action creators for actions with payloads
@@ -29,4 +30,5 @@ export const hit = (card) => ({ type: HIT, card })
 export const doubleDown = (card) => ({ type: DOUBLE_DOWN, card })
 export const dealerDraw = (card) => ({ type: DEALER_DRAW, card })
 export const resolveHand = (outcome) => ({ type: RESOLVE_HAND, outcome })
+export const removeAsset = (assetId) => ({ type: REMOVE_ASSET, assetId })
 export const unlockAchievement = (id) => ({ type: UNLOCK_ACHIEVEMENT, id })
