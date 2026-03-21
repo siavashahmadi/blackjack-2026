@@ -1,4 +1,4 @@
-import { useReducer, useRef, useCallback, useMemo } from 'react'
+import { useReducer, useRef, useCallback, useMemo, useState } from 'react'
 import audioManager from './utils/audioManager'
 import { gameReducer } from './reducer/gameReducer'
 import { createInitialState } from './reducer/initialState'
@@ -25,12 +25,19 @@ import ResultBanner from './components/ResultBanner'
 import LoanSharkPopup from './components/LoanSharkPopup'
 import AchievementToast from './components/AchievementToast'
 import AchievementPanel from './components/AchievementPanel'
+import FlyingChip from './components/FlyingChip'
 import styles from './App.module.css'
+
+let flyingChipId = 0
 
 function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState)
   const stateRef = useRef(state)
   stateRef.current = state
+
+  // Flying chip animations (purely visual — fire and forget)
+  const [flyingChips, setFlyingChips] = useState([])
+  const circleRef = useRef(null)
 
   // Dealer turn automation
   useDealerTurn(state, dispatch)
@@ -41,15 +48,51 @@ function App() {
   useSessionPersistence(state, dispatch)
 
   // --- Handlers (stable via useCallback — dispatch and stateRef never change identity) ---
-  const handleChipTap = useCallback((value) => {
-    // Play sound immediately on tap — not in useEffect — for zero-latency feedback
+  const handleChipTap = useCallback((value, event) => {
+    // Haptic + sound immediately on tap for zero-latency feedback
+    navigator.vibrate?.(10)
     const isFirst = stateRef.current.chipStack.length === 0
     audioManager.play(isFirst ? 'chip_place' : 'chip_stack')
     dispatch(selectChip(value))
     dispatch(addChip(value))
+
+    // Spawn flying chip animation (visual only)
+    if (event?.target && circleRef.current) {
+      const from = event.target.getBoundingClientRect()
+      const to = circleRef.current.getBoundingClientRect()
+      const id = ++flyingChipId
+      setFlyingChips(prev => [...prev, {
+        id,
+        value,
+        from: { x: from.left + from.width / 2 - 18, y: from.top + from.height / 2 - 18 },
+        to: { x: to.left + to.width / 2 - 18, y: to.top + to.height / 2 - 18 },
+      }])
+    }
   }, [])
 
-  const handleUndo = useCallback(() => dispatch({ type: UNDO_CHIP }), [])
+  const handleUndo = useCallback((event) => {
+    const chipStack = stateRef.current.chipStack
+    if (chipStack.length === 0) return
+    const removedValue = chipStack[chipStack.length - 1]
+
+    dispatch({ type: UNDO_CHIP })
+
+    // Spawn flying chip from circle to tray (visual only)
+    if (circleRef.current) {
+      const circleRect = circleRef.current.getBoundingClientRect()
+      const from = { x: circleRect.left + circleRect.width / 2 - 18, y: circleRect.top + circleRect.height / 2 - 18 }
+      // Target: approximate tray center (below the circle)
+      const to = { x: from.x, y: from.y + 200 }
+      const id = ++flyingChipId
+      setFlyingChips(prev => [...prev, {
+        id,
+        value: removedValue,
+        from,
+        to,
+      }])
+    }
+  }, [])
+
   const handleClear = useCallback(() => dispatch({ type: CLEAR_CHIPS }), [])
   const handleAllIn = useCallback(() => dispatch({ type: ALL_IN }), [])
 
@@ -73,13 +116,37 @@ function App() {
   const handleNewRound = useCallback(() => dispatch({ type: NEW_ROUND }), [])
   const handleReset = useCallback(() => dispatch({ type: RESET_GAME }), [])
 
-  const handleBetAsset = useCallback((asset) => dispatch(betAsset(asset)), [])
+  // Asset betting with confirmation for high-value assets
+  const [pendingAssetConfirm, setPendingAssetConfirm] = useState(null)
+
+  const handleBetAsset = useCallback((asset) => {
+    // House and soul require confirmation
+    if (asset.id === 'house' || asset.id === 'soul') {
+      setPendingAssetConfirm(asset)
+    } else {
+      dispatch(betAsset(asset))
+    }
+  }, [])
+
+  const handleConfirmAsset = useCallback(() => {
+    if (pendingAssetConfirm) {
+      dispatch(betAsset(pendingAssetConfirm))
+      setPendingAssetConfirm(null)
+    }
+  }, [pendingAssetConfirm])
+
+  const handleCancelAsset = useCallback(() => setPendingAssetConfirm(null), [])
+
   const handleRemoveAsset = useCallback((assetId) => dispatch(removeAsset(assetId)), [])
   const handleToggleAssetMenu = useCallback(() => dispatch({ type: TOGGLE_ASSET_MENU }), [])
   const handleDismissLoanShark = useCallback(() => dispatch({ type: DISMISS_LOAN_SHARK }), [])
   const handleToggleAchievements = useCallback(() => dispatch({ type: TOGGLE_ACHIEVEMENTS }), [])
   const handleDismissAchievement = useCallback(() => dispatch({ type: DISMISS_ACHIEVEMENT }), [])
   const handleToggleMute = useCallback(() => dispatch({ type: TOGGLE_MUTE }), [])
+
+  const removeFlyingChip = useCallback((id) => {
+    setFlyingChips(prev => prev.filter(c => c.id !== id))
+  }, [])
 
   // --- Derived state ---
   const currentBetTotal = useMemo(() =>
@@ -116,8 +183,10 @@ function App() {
           dealerMessage={state.dealerMessage}
         />
         <BettingCircle
+          ref={circleRef}
           chipStack={state.chipStack}
           bettedAssets={state.bettedAssets}
+          result={state.result}
           onUndo={handleUndo}
           onRemoveAsset={handleRemoveAsset}
         />
@@ -163,6 +232,38 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* Flying chip animations */}
+      {flyingChips.map(chip => (
+        <FlyingChip
+          key={chip.id}
+          value={chip.value}
+          from={chip.from}
+          to={chip.to}
+          onDone={() => removeFlyingChip(chip.id)}
+        />
+      ))}
+
+      {/* Asset confirmation modal */}
+      {pendingAssetConfirm && (
+        <div className={styles.confirmOverlay} onClick={handleCancelAsset}>
+          <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>
+            <span className={styles.confirmEmoji}>{pendingAssetConfirm.emoji}</span>
+            <span className={styles.confirmName}>{pendingAssetConfirm.name}</span>
+            <span className={styles.confirmValue}>
+              ${pendingAssetConfirm.value.toLocaleString()}
+            </span>
+            <div className={styles.confirmButtons}>
+              <button className={styles.confirmBet} onClick={handleConfirmAsset}>
+                BET IT
+              </button>
+              <button className={styles.confirmCancel} onClick={handleCancelAsset}>
+                NEVERMIND
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <LoanSharkPopup
         message={state.loanSharkQueue[0] || null}

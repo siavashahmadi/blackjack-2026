@@ -1,0 +1,34 @@
+.chip {
+  position: fixed;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  border: 3px dashed var(--chip-border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 100;
+  left: var(--fly-start-x);
+  top: var(--fly-start-y);
+  animation: flyArc 0.25s ease-out forwards;
+}
+@keyframes flyArc {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: translate(calc(var(--fly-dx) * 0.5), calc(var(--fly-dy) * 0.5 - 30px)) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--fly-dx), var(--fly-dy)) scale(1);
+    opacity: 1;
+  }
+}

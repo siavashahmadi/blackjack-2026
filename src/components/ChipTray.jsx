@@ -19,7 +19,7 @@ function ChipTray({ bankroll, selectedChipValue, onChipTap }) {
           textColor={chip.textColor}
           size="tray"
           selected={selectedChipValue === chip.value}
-          onClick={() => onChipTap(chip.value)}
+          onClick={(e) => onChipTap(chip.value, e)}
         />
       ))}
     </div>

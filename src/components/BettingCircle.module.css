@@ -98,6 +98,15 @@
   line-height: 1;
 }
 
+/* Result animations — chips animate out before clearing */
+.spreadOut {
+  animation: chipSpread 0.8s ease-out forwards;
+}
+
+.sweepOut {
+  animation: chipSweep 0.8s ease-out forwards;
+}
+
 @media (max-width: 374px) {
   .circle {
     width: 100px;

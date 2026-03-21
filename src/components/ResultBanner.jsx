@@ -10,9 +10,9 @@ const RESULT_CONFIG = {
 }
 
 function getNextHandText(bankroll) {
-  if (bankroll < -1000000) return 'THIS IS FINE'
+  if (bankroll < -1000000) return 'THIS IS FINE 🔥'
   if (bankroll < -100000) return 'ONE MORE. JUST ONE MORE.'
-  if (bankroll < -10000) return 'KEEP DIGGING'
+  if (bankroll < -10000) return 'KEEP DIGGING 🕳️'
   if (bankroll <= 0) return 'BET AGAIN (WHY NOT)'
   return 'NEXT HAND'
 }
