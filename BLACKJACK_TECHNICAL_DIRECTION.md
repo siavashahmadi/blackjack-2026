@@ -10,7 +10,7 @@ A mobile-first (iPhone-optimized) blackjack web app with a dark casino green fel
 
 **Phase 1** is a polished single-player experience. **Phase 2** adds real-time multiplayer so friends can play at the same virtual table from separate phones.
 
-The app will be self-hosted on a home Ubuntu server (sia-server, 192.168.86.22) behind Nginx Proxy Manager with SSL via Cloudflare origin cert.
+The app will be self-hosted on a home Ubuntu server (sia-server, <your-server-ip>) behind Nginx Proxy Manager with SSL via Cloudflare origin cert.
 
 ---
 
@@ -33,7 +33,7 @@ The app will be self-hosted on a home Ubuntu server (sia-server, 192.168.86.22) 
 - **Optional future:** Supabase for persistent leaderboards, player stats, lifetime debt tracking
 
 ### Hosting & Infrastructure
-- **Server:** Ubuntu Server 24.04 LTS (sia-server, 192.168.86.22)
+- **Server:** Ubuntu Server 24.04 LTS (sia-server, <your-server-ip>)
 - **Reverse proxy:** Nginx Proxy Manager (already running in Docker)
 - **SSL:** Cloudflare origin certificate (already configured)
 - **Domain:** Subdomain off siaahmadi.com (e.g., `blackjack.siaahmadi.com`) or siaa.dev when configured
