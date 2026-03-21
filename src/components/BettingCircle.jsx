@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { CHIPS } from '../constants/chips'
 import { MAX_VISUAL_CHIPS } from '../constants/gameConfig'
 import { formatMoney } from '../utils/formatters'
@@ -7,12 +8,18 @@ import styles from './BettingCircle.module.css'
 const CHIP_MAP = Object.fromEntries(CHIPS.map(c => [c.value, c]))
 
 function BettingCircle({ chipStack = [], bettedAssets = [], onUndo, onRemoveAsset }) {
-  const chipTotal = chipStack.reduce((sum, v) => sum + v, 0)
-  const assetTotal = bettedAssets.reduce((sum, a) => sum + a.value, 0)
-  const total = chipTotal + assetTotal
-  const isEmpty = chipStack.length === 0 && bettedAssets.length === 0
-  const visibleChips = chipStack.slice(-MAX_VISUAL_CHIPS)
-  const overflowCount = chipStack.length > MAX_VISUAL_CHIPS ? chipStack.length : 0
+  const { chipTotal, assetTotal, total, isEmpty, visibleChips, overflowCount } = useMemo(() => {
+    const ct = chipStack.reduce((sum, v) => sum + v, 0)
+    const at = bettedAssets.reduce((sum, a) => sum + a.value, 0)
+    return {
+      chipTotal: ct,
+      assetTotal: at,
+      total: ct + at,
+      isEmpty: chipStack.length === 0 && bettedAssets.length === 0,
+      visibleChips: chipStack.slice(-MAX_VISUAL_CHIPS),
+      overflowCount: chipStack.length > MAX_VISUAL_CHIPS ? chipStack.length : 0,
+    }
+  }, [chipStack, bettedAssets])
 
   return (
     <div className={styles.wrapper}>

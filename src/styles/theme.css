@@ -111,6 +111,10 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+button:active:not(:disabled) {
+  opacity: 0.85;
+}
+
 a {
   color: inherit;
   text-decoration: none;

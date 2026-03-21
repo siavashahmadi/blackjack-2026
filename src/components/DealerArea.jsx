@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import Hand from './Hand'
 import DealerSpeechBubble from './DealerSpeechBubble'
 import { handValue, cardValue } from '../utils/cardUtils'
@@ -6,15 +7,13 @@ import styles from './DealerArea.module.css'
 function DealerArea({ hand, phase, hideHoleCard, dealerMessage }) {
   const hasCards = hand.length > 0
 
-  let displayValue = ''
-  if (hasCards) {
+  const displayValue = useMemo(() => {
+    if (!hasCards) return ''
     if (hideHoleCard) {
-      // Only show the face-up card value (second card dealt = index 1)
-      displayValue = hand.length > 1 ? cardValue(hand[1]) : ''
-    } else {
-      displayValue = handValue(hand)
+      return hand.length > 1 ? cardValue(hand[1]) : ''
     }
-  }
+    return handValue(hand)
+  }, [hand, hasCards, hideHoleCard])
 
   return (
     <div className={styles.area}>

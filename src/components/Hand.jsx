@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import Card from './Card'
 import styles from './Hand.module.css'
 
@@ -10,7 +11,7 @@ function getCardMargin(cardCount, cardIndex) {
   return -35
 }
 
-function Hand({ cards = [], hideFirst = false, animate = true }) {
+const Hand = memo(function Hand({ cards = [], hideFirst = false, animate = true }) {
   const cardCount = cards.length
 
   return (
@@ -34,6 +35,6 @@ function Hand({ cards = [], hideFirst = false, animate = true }) {
       ))}
     </div>
   )
-}
+})
 
 export default Hand

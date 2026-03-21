@@ -5,6 +5,8 @@
   align-items: center;
   justify-content: center;
   min-height: 109px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .handCard {

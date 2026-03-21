@@ -67,6 +67,16 @@
   padding: 0 3px;
 }
 
+.muteButton {
+  font-size: 18px;
+  padding: 4px;
+  line-height: 1;
+}
+
+.muteButton:active {
+  transform: scale(0.9);
+}
+
 .resetButton {
   font-family: 'DM Sans', sans-serif;
   font-size: 11px;

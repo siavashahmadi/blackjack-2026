@@ -10,7 +10,7 @@ function getSubtitle(bankroll) {
   return 'HIGH ROLLER'
 }
 
-function Header({ bankroll, onReset, unlockedCount, onToggleAchievements }) {
+function Header({ bankroll, onReset, unlockedCount, onToggleAchievements, muted, onToggleMute }) {
   return (
     <header className={styles.header}>
       <div className={styles.brand}>
@@ -23,6 +23,9 @@ function Header({ bankroll, onReset, unlockedCount, onToggleAchievements }) {
           {unlockedCount > 0 && (
             <span className={styles.badge}>{unlockedCount}</span>
           )}
+        </button>
+        <button className={styles.muteButton} onClick={onToggleMute}>
+          {muted ? '🔇' : '🔊'}
         </button>
         <button className={styles.resetButton} onClick={onReset}>
           NEW GAME

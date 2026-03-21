@@ -1,10 +1,12 @@
+import { useMemo } from 'react'
 import { CHIPS } from '../constants/chips'
 import Chip from './Chip'
 import styles from './ChipTray.module.css'
 
 function ChipTray({ bankroll, selectedChipValue, onChipTap }) {
-  const availableChips = CHIPS.filter(
-    chip => chip.unlockThreshold === null || bankroll <= chip.unlockThreshold
+  const availableChips = useMemo(
+    () => CHIPS.filter(chip => chip.unlockThreshold === null || bankroll <= chip.unlockThreshold),
+    [bankroll]
   )
 
   return (

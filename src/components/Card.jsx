@@ -1,7 +1,8 @@
+import { memo } from 'react'
 import { SUIT_SYMBOLS, SUIT_COLORS } from '../constants/cards'
 import styles from './Card.module.css'
 
-function Card({ card, faceDown = false, index = 0, animate = true }) {
+const Card = memo(function Card({ card, faceDown = false, index = 0, animate = true }) {
   if (!card) return null
 
   const symbol = SUIT_SYMBOLS[card.suit]
@@ -32,6 +33,6 @@ function Card({ card, faceDown = false, index = 0, animate = true }) {
       </div>
     </div>
   )
-}
+})
 
 export default Card

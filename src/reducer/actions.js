@@ -22,6 +22,7 @@ export const UNLOCK_ACHIEVEMENT = 'UNLOCK_ACHIEVEMENT'
 export const LOAD_ACHIEVEMENTS = 'LOAD_ACHIEVEMENTS'
 export const REMOVE_ASSET = 'REMOVE_ASSET'
 export const TOGGLE_MUTE = 'TOGGLE_MUTE'
+export const LOAD_HIGHEST_DEBT = 'LOAD_HIGHEST_DEBT'
 export const SET_DEALER_MESSAGE = 'SET_DEALER_MESSAGE'
 
 // Action creators for actions with payloads
@@ -36,6 +37,7 @@ export const resolveHand = (outcome) => ({ type: RESOLVE_HAND, outcome })
 export const removeAsset = (assetId) => ({ type: REMOVE_ASSET, assetId })
 export const unlockAchievement = (id) => ({ type: UNLOCK_ACHIEVEMENT, id })
 export const loadAchievements = (ids) => ({ type: LOAD_ACHIEVEMENTS, ids })
+export const loadHighestDebt = (value) => ({ type: LOAD_HIGHEST_DEBT, value })
 export const setDealerMessage = (message, shownDealerLines) => ({
   type: SET_DEALER_MESSAGE,
   message,

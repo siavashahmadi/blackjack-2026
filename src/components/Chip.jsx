@@ -1,6 +1,7 @@
+import { memo } from 'react'
 import styles from './Chip.module.css'
 
-function Chip({ label, color, textColor, size = 'tray', selected = false, onClick, animate = false }) {
+const Chip = memo(function Chip({ label, color, textColor, size = 'tray', selected = false, onClick, animate = false }) {
   const sizeClass = size === 'stack' ? styles.stack : styles.tray
   const chipClass = `${styles.chip} ${sizeClass}${selected ? ` ${styles.selected}` : ''}${animate ? ` ${styles.animate}` : ''}`
 
@@ -18,6 +19,6 @@ function Chip({ label, color, textColor, size = 'tray', selected = false, onClic
       {label}
     </button>
   )
-}
+})
 
 export default Chip

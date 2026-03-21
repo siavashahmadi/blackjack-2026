@@ -5,6 +5,7 @@ import {
   TOGGLE_ASSET_MENU, TOGGLE_ACHIEVEMENTS,
   DISMISS_ACHIEVEMENT, DISMISS_LOAN_SHARK, UNLOCK_ACHIEVEMENT, LOAD_ACHIEVEMENTS,
   TOGGLE_MUTE, SET_DEALER_MESSAGE, SET_LOAN_SHARK_MESSAGE,
+  LOAD_HIGHEST_DEBT,
 } from './actions'
 import { createInitialState } from './initialState'
 import { CHIPS } from '../constants/chips'
@@ -257,7 +258,7 @@ export function gameReducer(state, action) {
     }
 
     case RESET_GAME: {
-      return createInitialState()
+      return { ...createInitialState(), muted: state.muted }
     }
 
     case TOGGLE_ASSET_MENU: {
@@ -299,6 +300,10 @@ export function gameReducer(state, action) {
 
     case TOGGLE_MUTE: {
       return { ...state, muted: !state.muted }
+    }
+
+    case LOAD_HIGHEST_DEBT: {
+      return { ...state, lowestBankroll: Math.min(state.lowestBankroll, action.value) }
     }
 
     case SET_DEALER_MESSAGE: {

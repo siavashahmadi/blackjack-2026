@@ -1,15 +1,18 @@
-import { useReducer, useRef } from 'react'
+import { useReducer, useRef, useCallback, useMemo } from 'react'
 import { gameReducer } from './reducer/gameReducer'
 import { createInitialState } from './reducer/initialState'
 import {
   addChip, selectChip, deal, hit, doubleDown, betAsset, removeAsset,
   UNDO_CHIP, CLEAR_CHIPS, ALL_IN, STAND, NEW_ROUND, RESET_GAME,
   TOGGLE_ASSET_MENU, DISMISS_LOAN_SHARK, TOGGLE_ACHIEVEMENTS, DISMISS_ACHIEVEMENT,
+  TOGGLE_MUTE,
 } from './reducer/actions'
 import { useDealerTurn } from './hooks/useDealerTurn'
 import { useDealerMessage } from './hooks/useDealerMessage'
 import { useLoanShark } from './hooks/useLoanShark'
 import { useAchievements } from './hooks/useAchievements'
+import { useSound } from './hooks/useSound'
+import { useSessionPersistence } from './hooks/useSessionPersistence'
 import Header from './components/Header'
 import BankrollDisplay from './components/BankrollDisplay'
 import DealerArea from './components/DealerArea'
@@ -33,52 +36,54 @@ function App() {
   useDealerMessage(state, dispatch)
   useLoanShark(state, dispatch)
   useAchievements(state, dispatch)
+  useSound(state)
+  useSessionPersistence(state, dispatch)
 
-  // Draw cards from deck (component picks, reducer processes)
-  const drawCards = (count) => stateRef.current.deck.slice(0, count)
-
-  // --- Handlers ---
-  const handleChipTap = (value) => {
+  // --- Handlers (stable via useCallback — dispatch and stateRef never change identity) ---
+  const handleChipTap = useCallback((value) => {
     dispatch(selectChip(value))
     dispatch(addChip(value))
-  }
+  }, [])
 
-  const handleUndo = () => dispatch({ type: UNDO_CHIP })
-  const handleClear = () => dispatch({ type: CLEAR_CHIPS })
-  const handleAllIn = () => dispatch({ type: ALL_IN })
+  const handleUndo = useCallback(() => dispatch({ type: UNDO_CHIP }), [])
+  const handleClear = useCallback(() => dispatch({ type: CLEAR_CHIPS }), [])
+  const handleAllIn = useCallback(() => dispatch({ type: ALL_IN }), [])
 
-  const handleDeal = () => {
-    const cards = drawCards(4)
+  const handleDeal = useCallback(() => {
+    const cards = stateRef.current.deck.slice(0, 4)
     dispatch(deal(cards))
-  }
+  }, [])
 
-  const handleHit = () => {
-    const [card] = drawCards(1)
+  const handleHit = useCallback(() => {
+    const [card] = stateRef.current.deck.slice(0, 1)
     dispatch(hit(card))
-  }
+  }, [])
 
-  const handleStand = () => dispatch({ type: STAND })
+  const handleStand = useCallback(() => dispatch({ type: STAND }), [])
 
-  const handleDoubleDown = () => {
-    const [card] = drawCards(1)
+  const handleDoubleDown = useCallback(() => {
+    const [card] = stateRef.current.deck.slice(0, 1)
     dispatch(doubleDown(card))
-  }
+  }, [])
 
-  const handleNewRound = () => dispatch({ type: NEW_ROUND })
-  const handleReset = () => dispatch({ type: RESET_GAME })
+  const handleNewRound = useCallback(() => dispatch({ type: NEW_ROUND }), [])
+  const handleReset = useCallback(() => dispatch({ type: RESET_GAME }), [])
 
-  const handleBetAsset = (asset) => dispatch(betAsset(asset))
-  const handleRemoveAsset = (assetId) => dispatch(removeAsset(assetId))
-  const handleToggleAssetMenu = () => dispatch({ type: TOGGLE_ASSET_MENU })
-  const handleDismissLoanShark = () => dispatch({ type: DISMISS_LOAN_SHARK })
-  const handleToggleAchievements = () => dispatch({ type: TOGGLE_ACHIEVEMENTS })
-  const handleDismissAchievement = () => dispatch({ type: DISMISS_ACHIEVEMENT })
+  const handleBetAsset = useCallback((asset) => dispatch(betAsset(asset)), [])
+  const handleRemoveAsset = useCallback((assetId) => dispatch(removeAsset(assetId)), [])
+  const handleToggleAssetMenu = useCallback(() => dispatch({ type: TOGGLE_ASSET_MENU }), [])
+  const handleDismissLoanShark = useCallback(() => dispatch({ type: DISMISS_LOAN_SHARK }), [])
+  const handleToggleAchievements = useCallback(() => dispatch({ type: TOGGLE_ACHIEVEMENTS }), [])
+  const handleDismissAchievement = useCallback(() => dispatch({ type: DISMISS_ACHIEVEMENT }), [])
+  const handleToggleMute = useCallback(() => dispatch({ type: TOGGLE_MUTE }), [])
 
   // --- Derived state ---
-  const canDoubleDown =
+  const canDoubleDown = useMemo(() =>
     state.phase === 'playing' &&
     state.playerHand.length === 2 &&
-    !state.isDoubledDown
+    !state.isDoubledDown,
+    [state.phase, state.playerHand.length, state.isDoubledDown]
+  )
 
   const hideHoleCard = state.phase === 'playing'
 
@@ -89,6 +94,8 @@ function App() {
         onReset={handleReset}
         unlockedCount={state.unlockedAchievements.length}
         onToggleAchievements={handleToggleAchievements}
+        muted={state.muted}
+        onToggleMute={handleToggleMute}
       />
       <BankrollDisplay bankroll={state.bankroll} />
 
