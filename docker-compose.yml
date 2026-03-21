@@ -8,11 +8,10 @@ services:
       - "3021:80"
     restart: unless-stopped
 
-  # Phase 2 — uncomment when backend is ready
-  # backend:
-  #   build:
-  #     context: ./server
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3022:8000"
-  #   restart: unless-stopped
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3022:8000"
+    restart: unless-stopped

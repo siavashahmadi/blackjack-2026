@@ -1,0 +1,175 @@
+"""Game room and player state management for multiplayer blackjack."""
+
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+import random
+import string
+
+# Excludes ambiguous characters (I/1/O/0) for mobile entry ease
+ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+MAX_PLAYERS = 6
+MIN_PLAYERS = 2
+
+
+@dataclass
+class PlayerState:
+    name: str
+    player_id: str
+    connected: bool = True
+    is_host: bool = False
+    disconnected_at: datetime | None = None
+
+
+@dataclass
+class GameRoom:
+    code: str
+    players: dict[str, PlayerState] = field(default_factory=dict)
+    phase: str = "lobby"  # "lobby" or "playing"
+    host_id: str | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# Global in-memory registry: room_code -> GameRoom
+rooms: dict[str, GameRoom] = {}
+
+
+def generate_room_code(length: int = 4) -> str:
+    """Generate a unique 4-character room code."""
+    for _ in range(100):
+        code = "".join(random.choices(ROOM_CODE_CHARS, k=length))
+        if code not in rooms:
+            return code
+    # Extremely unlikely fallback: extend to 5 characters
+    return "".join(random.choices(ROOM_CODE_CHARS, k=length + 1))
+
+
+def get_room(code: str) -> GameRoom | None:
+    """Look up a room by code (case-insensitive)."""
+    return rooms.get(code.upper())
+
+
+def create_room(player_name: str, player_id: str) -> GameRoom:
+    """Create a new room and add the creator as host."""
+    code = generate_room_code()
+    player = PlayerState(name=player_name, player_id=player_id, is_host=True)
+    room = GameRoom(code=code, players={player_id: player}, host_id=player_id)
+    rooms[code] = room
+    return room
+
+
+def validate_player_name(name: str | None) -> str:
+    """Validate and clean a player name. Returns cleaned name or raises ValueError."""
+    if not name or not name.strip():
+        raise ValueError("Player name is required")
+    cleaned = name.strip()
+    if len(cleaned) > 20:
+        raise ValueError("Player name must be 20 characters or less")
+    return cleaned
+
+
+def add_player_to_room(room: GameRoom, player_name: str, player_id: str) -> PlayerState:
+    """Add a player to an existing room. Raises ValueError on validation failures."""
+    if len(room.players) >= MAX_PLAYERS:
+        raise ValueError(f"Room is full (max {MAX_PLAYERS} players)")
+
+    if room.phase != "lobby":
+        raise ValueError("Cannot join, game already in progress")
+
+    # Case-insensitive duplicate name check
+    lower_name = player_name.lower()
+    for p in room.players.values():
+        if p.name.lower() == lower_name:
+            raise ValueError("Name already taken in this room")
+
+    player = PlayerState(name=player_name, player_id=player_id)
+    room.players[player_id] = player
+    return player
+
+
+def remove_player_from_room(room: GameRoom, player_id: str) -> str | None:
+    """Remove a player from a room. Transfers host if needed.
+
+    Returns the new host's player_id if host was transferred, None otherwise.
+    Deletes the room from registry if empty after removal.
+    """
+    if player_id not in room.players:
+        return None
+
+    was_host = room.players[player_id].is_host
+    del room.players[player_id]
+
+    new_host_id = None
+
+    if was_host and room.players:
+        # Transfer host to first connected player
+        for pid, player in room.players.items():
+            if player.connected:
+                player.is_host = True
+                room.host_id = pid
+                new_host_id = pid
+                break
+        # If no connected players, assign to first player anyway
+        if new_host_id is None:
+            first_pid = next(iter(room.players))
+            room.players[first_pid].is_host = True
+            room.host_id = first_pid
+            new_host_id = first_pid
+
+    if not room.players:
+        # Room is empty — remove from registry
+        rooms.pop(room.code, None)
+
+    return new_host_id
+
+
+def get_player_list(room: GameRoom) -> list[dict]:
+    """Return serializable list of players for broadcasting."""
+    return [
+        {
+            "name": p.name,
+            "player_id": p.player_id,
+            "is_host": p.is_host,
+            "connected": p.connected,
+        }
+        for p in room.players.values()
+    ]
+
+
+def cleanup_empty_rooms(max_age_seconds: int = 300) -> int:
+    """Remove rooms where all players disconnected > max_age_seconds ago.
+
+    Returns the count of rooms removed.
+    """
+    now = datetime.now(timezone.utc)
+    to_remove = []
+
+    for code, room in rooms.items():
+        if not room.players:
+            # No players at all — check room age
+            if (now - room.created_at).total_seconds() > max_age_seconds:
+                to_remove.append(code)
+            continue
+
+        # All players disconnected?
+        all_disconnected = all(not p.connected for p in room.players.values())
+        if not all_disconnected:
+            continue
+
+        # Find the most recent disconnect time
+        disconnect_times = [
+            p.disconnected_at
+            for p in room.players.values()
+            if p.disconnected_at is not None
+        ]
+        if not disconnect_times:
+            continue
+
+        latest_disconnect = max(disconnect_times)
+        if (now - latest_disconnect).total_seconds() > max_age_seconds:
+            to_remove.append(code)
+
+    for code in to_remove:
+        del rooms[code]
+
+    return len(to_remove)
