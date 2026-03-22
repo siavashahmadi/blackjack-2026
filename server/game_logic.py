@@ -70,7 +70,11 @@ class GameEngine:
         """Validate and record a player's bet. Auto-deals when all bets are in."""
         player = self._validate_betting(room, player_id)
 
-        if not isinstance(amount, int) or amount < MIN_BET:
+        if not isinstance(amount, int) or amount < 0:
+            raise ValueError("Invalid bet amount")
+        if amount < MIN_BET and amount > 0:
+            raise ValueError(f"Bet must be at least ${MIN_BET}")
+        if amount == 0 and not player.betted_assets:
             raise ValueError(f"Bet must be at least ${MIN_BET}")
 
         player.bet = amount

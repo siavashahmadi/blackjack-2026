@@ -2,8 +2,13 @@ import { memo } from 'react'
 import Card from './Card'
 import styles from './Hand.module.css'
 
-function getCardMargin(cardCount, cardIndex) {
+function getCardMargin(cardCount, cardIndex, size) {
   if (cardIndex === 0) return 0
+  if (size === 'small') {
+    if (cardCount <= 2) return 4
+    if (cardCount === 3) return -4
+    return -12
+  }
   if (cardCount <= 2) return 10
   if (cardCount === 3) return 0
   if (cardCount === 4) return -15
@@ -11,7 +16,7 @@ function getCardMargin(cardCount, cardIndex) {
   return -35
 }
 
-const Hand = memo(function Hand({ cards = [], hideFirst = false, animate = true }) {
+const Hand = memo(function Hand({ cards = [], hideFirst = false, animate = true, size = 'normal' }) {
   const cardCount = cards.length
 
   return (
@@ -21,7 +26,7 @@ const Hand = memo(function Hand({ cards = [], hideFirst = false, animate = true 
           key={card.id}
           className={styles.handCard}
           style={{
-            marginLeft: getCardMargin(cardCount, i),
+            marginLeft: getCardMargin(cardCount, i, size),
             zIndex: i,
           }}
         >
@@ -30,6 +35,7 @@ const Hand = memo(function Hand({ cards = [], hideFirst = false, animate = true 
             faceDown={hideFirst && i === 0}
             index={i}
             animate={animate}
+            size={size}
           />
         </div>
       ))}

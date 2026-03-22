@@ -81,19 +81,19 @@
 }
 
 .rank {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1.1;
 }
 
 .suitSmall {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1;
 }
 
 /* ===== Center Suit ===== */
 .centerSuit {
-  font-size: 34px;
+  font-size: 38px;
   position: absolute;
   top: 50%;
   left: 50%;
@@ -111,6 +111,34 @@
   color: var(--card-black);
 }
 
+/* ===== Small Size Variant (for other players in multiplayer) ===== */
+.small {
+  width: 45px;
+  height: 65px;
+  border-radius: 6px;
+}
+
+.small .face {
+  border-radius: 6px;
+  padding: 2px 3px;
+}
+
+.small .back {
+  border-radius: 6px;
+}
+
+.small .rank {
+  font-size: 12px;
+}
+
+.small .suitSmall {
+  font-size: 8px;
+}
+
+.small .centerSuit {
+  font-size: 20px;
+}
+
 /* ===== Deal Animation ===== */
 .dealing {
   animation: cardDeal 0.4s cubic-bezier(0.23, 1, 0.32, 1) both;
@@ -124,14 +152,14 @@
   }
 
   .rank {
-    font-size: 15px;
+    font-size: 18px;
   }
 
   .suitSmall {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .centerSuit {
-    font-size: 28px;
+    font-size: 30px;
   }
 }

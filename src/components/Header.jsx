@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react'
 import styles from './Header.module.css'
 
 function getSubtitle(bankroll) {
@@ -10,26 +11,66 @@ function getSubtitle(bankroll) {
   return 'HIGH ROLLER'
 }
 
-function Header({ bankroll, onReset, unlockedCount, onToggleAchievements, muted, onToggleMute }) {
+function Header({
+  bankroll,
+  onReset,
+  unlockedCount,
+  onToggleAchievements,
+  muted,
+  onToggleMute,
+  // Multiplayer props
+  mode,
+  roomCode,
+  onLeave,
+}) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopyCode = useCallback(async () => {
+    if (!roomCode) return
+    try {
+      await navigator.clipboard.writeText(roomCode)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // ignore
+    }
+  }, [roomCode])
+
+  const isMultiplayer = mode === 'multiplayer'
+
   return (
     <header className={styles.header}>
       <div className={styles.brand}>
         <h1 className={styles.logo}>BLACKJACK</h1>
-        <span className={styles.subtitle}>{getSubtitle(bankroll)}</span>
+        {isMultiplayer && roomCode ? (
+          <button className={styles.roomCodeButton} onClick={handleCopyCode}>
+            {copied ? 'Copied!' : roomCode}
+          </button>
+        ) : (
+          <span className={styles.subtitle}>{getSubtitle(bankroll)}</span>
+        )}
       </div>
       <div className={styles.actions}>
-        <button className={styles.achievementButton} onClick={onToggleAchievements}>
-          <span>🏆</span>
-          {unlockedCount > 0 && (
-            <span className={styles.badge}>{unlockedCount}</span>
-          )}
-        </button>
+        {!isMultiplayer && (
+          <button className={styles.achievementButton} onClick={onToggleAchievements}>
+            <span>🏆</span>
+            {unlockedCount > 0 && (
+              <span className={styles.badge}>{unlockedCount}</span>
+            )}
+          </button>
+        )}
         <button className={styles.muteButton} onClick={onToggleMute}>
           {muted ? '🔇' : '🔊'}
         </button>
-        <button className={styles.resetButton} onClick={onReset}>
-          NEW GAME
-        </button>
+        {isMultiplayer ? (
+          <button className={styles.resetButton} onClick={onLeave}>
+            LEAVE
+          </button>
+        ) : (
+          <button className={styles.resetButton} onClick={onReset}>
+            NEW GAME
+          </button>
+        )}
       </div>
     </header>
   )

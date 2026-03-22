@@ -50,3 +50,10 @@
 .nextButton:active {
   transform: scale(0.97);
 }
+
+.countdownText {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}

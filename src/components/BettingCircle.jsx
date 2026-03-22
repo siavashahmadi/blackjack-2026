@@ -115,10 +115,10 @@ const BettingCircle = forwardRef(function BettingCircle(
           <span className={styles.badge}>&times;{overflowCount}</span>
         )}
         {isEmpty && !animatingOut && <span className={styles.placeholder}>BET</span>}
+        {total > 0 && !animatingOut && (
+          <span className={styles.total}>{formatMoney(total)}</span>
+        )}
       </button>
-      {total > 0 && (
-        <span className={styles.total}>{formatMoney(total)}</span>
-      )}
     </div>
   )
 })

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import styles from './ResultBanner.module.css'
 
 const RESULT_CONFIG = {
@@ -17,8 +18,23 @@ function getNextHandText(bankroll) {
   return 'NEXT HAND'
 }
 
-function ResultBanner({ result, bankroll, onNextHand }) {
+function ResultBanner({ result, bankroll, onNextHand, autoAdvance = false, nextRoundAt }) {
+  const [countdown, setCountdown] = useState(null)
   const config = RESULT_CONFIG[result]
+
+  useEffect(() => {
+    if (!autoAdvance || !nextRoundAt) return
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((nextRoundAt - Date.now()) / 1000))
+      setCountdown(remaining)
+    }
+
+    tick()
+    const interval = setInterval(tick, 500)
+    return () => clearInterval(interval)
+  }, [autoAdvance, nextRoundAt])
+
   if (!config) return null
 
   return (
@@ -26,9 +42,15 @@ function ResultBanner({ result, bankroll, onNextHand }) {
       <span className={`${styles.resultText} ${styles[config.colorClass]}`}>
         {config.text}
       </span>
-      <button className={styles.nextButton} onClick={onNextHand}>
-        {getNextHandText(bankroll)}
-      </button>
+      {autoAdvance ? (
+        <span className={styles.countdownText}>
+          Next round in {countdown ?? '...'}s
+        </span>
+      ) : (
+        <button className={styles.nextButton} onClick={onNextHand}>
+          {getNextHandText(bankroll)}
+        </button>
+      )}
     </div>
   )
 }

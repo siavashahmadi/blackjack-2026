@@ -1,0 +1,140 @@
+.spot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(232, 224, 208, 0.08);
+  background: rgba(0, 0, 0, 0.15);
+  transition: border-color 0.3s, box-shadow 0.3s;
+  min-width: 0;
+}
+
+.compact {
+  min-width: 120px;
+  max-width: 140px;
+  flex-shrink: 0;
+}
+
+.active {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 12px var(--gold-glow);
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.disconnectedDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+  flex-shrink: 0;
+}
+
+.name {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.youBadge {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 1px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(240, 200, 80, 0.15);
+}
+
+.handArea {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 40px;
+}
+
+.empty {
+  width: 75px;
+  height: 16px;
+}
+
+.emptySmall {
+  width: 45px;
+  height: 16px;
+}
+
+.info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.bet {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--gold);
+}
+
+.assets {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.bankrollRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bankroll {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.inDebt {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.result {
+  font-family: 'Playfair Display', serif;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.gold { color: var(--gold); }
+.green { color: var(--success); }
+.red { color: var(--danger); }
+.dim { color: var(--text-dim); }
+
+.status {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}

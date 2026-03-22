@@ -6,6 +6,7 @@ import { DECK_COUNT } from '../constants/gameConfig'
  * Face cards = 10, Ace = 11 (ace adjustment happens in handValue).
  */
 export function cardValue(card) {
+  if (!card.rank || card.rank === '?') return 0
   if (card.rank === 'A') return 11
   if (['K', 'Q', 'J'].includes(card.rank)) return 10
   return parseInt(card.rank, 10)
