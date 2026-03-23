@@ -12,6 +12,8 @@ function renderPips(rank, symbol, size) {
     return <span className={styles.centerSuit}>{symbol}</span>
   }
 
+  // Medium and normal both show full pip layout
+
   const layout = PIP_LAYOUTS[parseInt(rank, 10)]
   if (!layout) return <span className={styles.centerSuit}>{symbol}</span>
 
@@ -71,7 +73,7 @@ const Card = memo(function Card({ card, faceDown = false, index = 0, animate = t
 
   // Server sends {rank: "?", suit: "?"} for hidden hole card
   const isHidden = faceDown || card.rank === '?'
-  const sizeClass = size === 'small' ? styles.small : ''
+  const sizeClass = size === 'small' ? styles.small : size === 'medium' ? styles.medium : ''
   const animationStyle = animate ? { animationDelay: `${index * 150}ms` } : undefined
   const cardClass = `${styles.card}${animate ? ` ${styles.dealing}` : ''}${sizeClass ? ` ${sizeClass}` : ''}`
 

@@ -35,11 +35,13 @@ export function useSound(state) {
       }
     }
 
-    // Hit or double down — player hand grew during playing phase
+    // Hit or double down — player hand cards grew during playing phase
+    const totalCards = state.playerHands?.reduce((sum, h) => sum + h.cards.length, 0) ?? 0
+    const prevTotalCards = prev.playerHands?.reduce((sum, h) => sum + h.cards.length, 0) ?? 0
     if (
       state.phase === 'playing' &&
       prev.phase === 'playing' &&
-      state.playerHand.length > prev.playerHand.length
+      totalCards > prevTotalCards
     ) {
       audioManager.play('card_deal')
     }

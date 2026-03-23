@@ -5,7 +5,7 @@ import styles from './ChipTray.module.css'
 
 function ChipTray({ bankroll, selectedChipValue, onChipTap }) {
   const availableChips = useMemo(
-    () => CHIPS.filter(chip => chip.unlockThreshold === null || bankroll <= chip.unlockThreshold),
+    () => CHIPS.filter(chip => chip.unlockThreshold === null || bankroll <= chip.unlockThreshold || (chip.unlockAbove != null && bankroll >= chip.unlockAbove)),
     [bankroll]
   )
 

@@ -32,6 +32,21 @@
   color: var(--text-dim);
 }
 
+.netPayout {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.payoutWin {
+  color: var(--success);
+}
+
+.payoutLoss {
+  color: var(--danger);
+}
+
 .nextButton {
   font-family: 'Playfair Display', Georgia, serif;
   font-size: 16px;

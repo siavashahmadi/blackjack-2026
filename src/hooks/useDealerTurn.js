@@ -3,8 +3,8 @@ import { handValue, isSoft } from '../utils/cardUtils'
 import { dealerDraw, resolveHand } from '../reducer/actions'
 import { DEALER_HIT_DELAY, DEALER_STAND_DELAY } from '../constants/gameConfig'
 
-function determineOutcome(playerHand, dealerHand) {
-  const playerVal = handValue(playerHand)
+function determineOutcome(playerCards, dealerHand) {
+  const playerVal = handValue(playerCards)
   const dealerVal = handValue(dealerHand)
   if (dealerVal > 21) return 'dealerBust'
   if (dealerVal > playerVal) return 'lose'
@@ -27,16 +27,19 @@ export function useDealerTurn(state, dispatch) {
       }, DEALER_HIT_DELAY)
       return () => clearTimeout(timeout)
     } else {
-      // Dealer stands — resolve
+      // Dealer stands — resolve all player hands
       const timeout = setTimeout(() => {
-        const outcome = determineOutcome(state.playerHand, state.dealerHand)
-        dispatch(resolveHand(outcome))
+        const outcomes = state.playerHands.map(hand => {
+          if (hand.result === 'bust') return 'bust'
+          return determineOutcome(hand.cards, state.dealerHand)
+        })
+        dispatch(resolveHand(outcomes))
       }, DEALER_STAND_DELAY)
       return () => clearTimeout(timeout)
     }
-  }, [state.phase, state.dealerHand, dispatch])
+  }, [state.phase, state.dealerHand, state.playerHands, dispatch])
 
-  // Handle natural blackjack resolution
+  // Handle natural blackjack / all-bust resolution
   // DEAL sets phase='result' with result set, but doesn't update bankroll/stats.
   // We need to dispatch RESOLVE_HAND to settle the bet.
   useEffect(() => {
@@ -45,10 +48,12 @@ export function useDealerTurn(state, dispatch) {
       state.result !== null &&
       state.chipStack.length > 0
     ) {
+      // Build outcomes from existing hand results
+      const outcomes = state.playerHands.map(h => h.result || state.result)
       const timeout = setTimeout(() => {
-        dispatch(resolveHand(state.result))
+        dispatch(resolveHand(outcomes))
       }, 300)
       return () => clearTimeout(timeout)
     }
-  }, [state.phase, state.result, state.chipStack.length, dispatch])
+  }, [state.phase, state.result, state.chipStack.length, state.playerHands, dispatch])
 }

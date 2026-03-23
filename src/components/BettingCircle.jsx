@@ -9,7 +9,7 @@ const CHIP_MAP = Object.fromEntries(CHIPS.map(c => [c.value, c]))
 const RESULT_ANIMATE_MS = 800
 
 const BettingCircle = forwardRef(function BettingCircle(
-  { chipStack = [], bettedAssets = [], result, onUndo, onRemoveAsset },
+  { chipStack = [], bettedAssets = [], result, onUndo, onRemoveAsset, playerHands = [] },
   ref
 ) {
   // Local state to delay visual clearing of chips after hand resolution
@@ -117,8 +117,16 @@ const BettingCircle = forwardRef(function BettingCircle(
           <span className={styles.badge}>&times;{overflowCount}</span>
         )}
         {isEmpty && !animatingOut && <span className={styles.placeholder}>BET</span>}
-        {total > 0 && !animatingOut && (
+        {total > 0 && !animatingOut && playerHands.length <= 1 && (
           <span className={styles.total}>{formatMoney(total)}</span>
+        )}
+        {playerHands.length > 1 && !animatingOut && (
+          <>
+            <span className={styles.total}>
+              {formatMoney(playerHands.reduce((sum, h) => sum + h.bet, 0))}
+            </span>
+            <span className={styles.handCount}>{playerHands.length} HANDS</span>
+          </>
         )}
       </button>
     </div>

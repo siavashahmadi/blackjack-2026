@@ -49,8 +49,9 @@ function checkAchievements(prevState, state) {
   if (state.loseStreak >= 10) grant('lose_streak_10')
 
   // Double down
-  if (state.isDoubledDown && isWin) grant('double_down_win')
-  if (state.isDoubledDown && isLoss) grant('double_down_loss')
+  const anyDoubledDown = state.playerHands?.some(h => h.isDoubledDown) ?? false
+  if (anyDoubledDown && isWin) grant('double_down_win')
+  if (anyDoubledDown && isLoss) grant('double_down_loss')
 
   // Blackjack
   if (state.result === 'blackjack') grant('blackjack')
@@ -68,6 +69,18 @@ function checkAchievements(prevState, state) {
   // Lose everything — all 6 assets are false after this hand
   const allAssetsLost = Object.values(state.ownedAssets).every(v => !v)
   if (allAssetsLost && prevState.bettedAssets.length > 0) grant('lose_everything')
+
+  // Split achievements
+  if (state.playerHands && state.playerHands.length > 1) {
+    grant('first_split')
+    if (state.playerHands.length >= 4) grant('split_four')
+    const allWin = state.playerHands.every(h =>
+      h.result === 'win' || h.result === 'dealerBust' || h.result === 'blackjack'
+    )
+    if (allWin) grant('split_both_win')
+    const allBust = state.playerHands.every(h => h.result === 'bust')
+    if (allBust) grant('split_both_bust')
+  }
 
   return earned
 }

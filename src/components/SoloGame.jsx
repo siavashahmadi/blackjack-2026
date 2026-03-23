@@ -2,9 +2,9 @@ import { useReducer, useRef, useCallback, useMemo, useState } from 'react'
 import audioManager from '../utils/audioManager'
 import { gameReducer } from '../reducer/gameReducer'
 import { createInitialState } from '../reducer/initialState'
-import { createDeck, shuffle } from '../utils/cardUtils'
+import { cardValue, createDeck, shuffle } from '../utils/cardUtils'
 import {
-  addChip, selectChip, deal, hit, doubleDown, betAsset, removeAsset,
+  addChip, selectChip, deal, hit, doubleDown, split, betAsset, removeAsset,
   newRound, resetGame,
   UNDO_CHIP, CLEAR_CHIPS, ALL_IN, STAND,
   TOGGLE_ASSET_MENU, DISMISS_LOAN_SHARK, TOGGLE_ACHIEVEMENTS, DISMISS_ACHIEVEMENT,
@@ -120,6 +120,11 @@ function SoloGame({ onBack }) {
     dispatch(doubleDown(card))
   }, [])
 
+  const handleSplit = useCallback(() => {
+    const cards = stateRef.current.deck.slice(0, 2)
+    dispatch(split(cards))
+  }, [])
+
   const handleNewRound = useCallback(() => dispatch(newRound(shuffle(createDeck()))), [])
   const handleReset = useCallback(() => dispatch(resetGame(shuffle(createDeck()))), [])
 
@@ -163,12 +168,22 @@ function SoloGame({ onBack }) {
     [state.chipStack]
   )
 
-  const canDoubleDown = useMemo(() =>
-    state.phase === 'playing' &&
-    state.playerHand.length === 2 &&
-    !state.isDoubledDown,
-    [state.phase, state.playerHand.length, state.isDoubledDown]
-  )
+  const currentActiveHand = state.playerHands[state.activeHandIndex]
+
+  const canDoubleDown = useMemo(() => {
+    if (state.phase !== 'playing' || !currentActiveHand) return false
+    if (currentActiveHand.isSplitAces) return false
+    return currentActiveHand.cards.length === 2 && !currentActiveHand.isDoubledDown
+  }, [state.phase, currentActiveHand])
+
+  // Never check bankroll — casino extends infinite credit
+  const canSplit = useMemo(() => {
+    if (state.phase !== 'playing' || !currentActiveHand) return false
+    if (currentActiveHand.cards.length !== 2) return false
+    if (currentActiveHand.isSplitAces) return false
+    if (state.playerHands.length >= 4) return false
+    return cardValue(currentActiveHand.cards[0]) === cardValue(currentActiveHand.cards[1])
+  }, [state.phase, currentActiveHand, state.playerHands.length])
 
   const hideHoleCard = state.phase === 'playing'
 
@@ -208,8 +223,14 @@ function SoloGame({ onBack }) {
           result={state.result}
           onUndo={handleUndo}
           onRemoveAsset={handleRemoveAsset}
+          playerHands={state.playerHands}
         />
-        <PlayerArea hand={state.playerHand} />
+        <PlayerArea
+          playerHands={state.playerHands}
+          activeHandIndex={state.activeHandIndex}
+          phase={state.phase}
+          bettedAssets={state.bettedAssets}
+        />
       </div>
 
       <div className={styles.controlsArea}>
@@ -237,6 +258,8 @@ function SoloGame({ onBack }) {
               onStand={handleStand}
               onDoubleDown={handleDoubleDown}
               canDoubleDown={canDoubleDown}
+              onSplit={handleSplit}
+              canSplit={canSplit}
             />
           )}
           {state.phase === 'dealerTurn' && (
@@ -246,6 +269,7 @@ function SoloGame({ onBack }) {
             <ResultBanner
               result={state.result}
               bankroll={state.bankroll}
+              playerHands={state.playerHands}
               onNextHand={handleNewRound}
             />
           )}

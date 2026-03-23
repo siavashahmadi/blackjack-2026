@@ -72,6 +72,20 @@
   pointer-events: none;
 }
 
+.handCount {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .assetChips {
   position: relative;
   width: 36px;

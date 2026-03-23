@@ -11,6 +11,7 @@ export const STAND = 'STAND'
 export const DOUBLE_DOWN = 'DOUBLE_DOWN'
 export const DEALER_DRAW = 'DEALER_DRAW'
 export const RESOLVE_HAND = 'RESOLVE_HAND'
+export const SPLIT = 'SPLIT'
 export const NEW_ROUND = 'NEW_ROUND'
 export const RESET_GAME = 'RESET_GAME'
 export const TOGGLE_ASSET_MENU = 'TOGGLE_ASSET_MENU'
@@ -35,7 +36,8 @@ export const betAsset = (asset) => ({ type: BET_ASSET, asset })
 export const hit = (card) => ({ type: HIT, card })
 export const doubleDown = (card) => ({ type: DOUBLE_DOWN, card })
 export const dealerDraw = (card) => ({ type: DEALER_DRAW, card })
-export const resolveHand = (outcome) => ({ type: RESOLVE_HAND, outcome })
+export const resolveHand = (outcomes) => ({ type: RESOLVE_HAND, outcomes })
+export const split = (cards) => ({ type: SPLIT, cards })
 export const removeAsset = (assetId) => ({ type: REMOVE_ASSET, assetId })
 export const unlockAchievement = (id) => ({ type: UNLOCK_ACHIEVEMENT, id })
 export const loadAchievements = (ids) => ({ type: LOAD_ACHIEVEMENTS, ids })

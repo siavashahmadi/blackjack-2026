@@ -12,7 +12,7 @@ from card_engine import (
     shuffle_deck,
 )
 from constants import ASSETS, ASSET_MAP, MIN_BET, STARTING_BANKROLL
-from game_logic import GameEngine
+from game_logic import GameEngine, create_hand_dict
 from game_room import GameRoom, PlayerState, reset_round_state
 
 
@@ -233,9 +233,11 @@ class TestPlaceBet(unittest.TestCase):
         events = self.eng.place_bet(self.room, "player1", 200)
         # Should include cards_dealt event
         self.assertTrue(any(e["type"] == "cards_dealt" for e in events))
-        # Players should have hands
-        self.assertEqual(len(self.room.players["player0"].hand), 2)
-        self.assertEqual(len(self.room.players["player1"].hand), 2)
+        # Players should have hand dicts
+        self.assertEqual(len(self.room.players["player0"].hands), 1)
+        self.assertEqual(len(self.room.players["player0"].hands[0]["cards"]), 2)
+        self.assertEqual(len(self.room.players["player1"].hands), 1)
+        self.assertEqual(len(self.room.players["player1"].hands[0]["cards"]), 2)
         self.assertEqual(len(self.room.dealer_hand), 2)
 
     def test_negative_bankroll_can_bet(self):
@@ -306,10 +308,11 @@ class TestHit(unittest.TestCase):
 
         current_pid = room.turn_order[room.current_player_idx]
         player = room.players[current_pid]
-        initial_count = len(player.hand)
+        hand = player.hands[player.active_hand_index]
+        initial_count = len(hand["cards"])
 
         events = eng.hit(room, current_pid)
-        self.assertEqual(len(player.hand), initial_count + 1)
+        self.assertEqual(len(hand["cards"]), initial_count + 1)
         self.assertTrue(any(e["type"] == "player_hit" for e in events))
 
     def test_hit_wrong_turn(self):
@@ -347,10 +350,11 @@ class TestHit(unittest.TestCase):
         current_pid = room.turn_order[room.current_player_idx]
         events = eng.hit(room, current_pid)
         player = room.players[current_pid]
+        hand = player.hands[0]
 
-        if hand_value(player.hand) > 21:
-            self.assertEqual(player.status, "bust")
-            self.assertEqual(player.result, "bust")
+        if hand_value(hand["cards"]) > 21:
+            self.assertEqual(hand["status"], "bust")
+            self.assertEqual(hand["result"], "bust")
 
 
 class TestStand(unittest.TestCase):
@@ -375,7 +379,7 @@ class TestStand(unittest.TestCase):
 
         first_pid = room.turn_order[room.current_player_idx]
         events = eng.stand(room, first_pid)
-        self.assertEqual(room.players[first_pid].status, "standing")
+        self.assertEqual(room.players[first_pid].hands[0]["status"], "standing")
 
         # Turn should have advanced
         self.assertTrue(
@@ -407,11 +411,12 @@ class TestDoubleDown(unittest.TestCase):
         current_pid = room.turn_order[room.current_player_idx]
         events = eng.double_down(room, current_pid)
         player = room.players[current_pid]
+        hand = player.hands[0]
 
-        self.assertEqual(player.bet, 200)  # Doubled
-        self.assertEqual(len(player.hand), 3)  # Got one more card
-        self.assertTrue(player.is_doubled_down)
-        self.assertIn(player.status, ("standing", "bust"))
+        self.assertEqual(hand["bet"], 200)  # Doubled
+        self.assertEqual(len(hand["cards"]), 3)  # Got one more card
+        self.assertTrue(hand["is_doubled_down"])
+        self.assertIn(hand["status"], ("standing", "bust"))
 
     def test_double_down_requires_two_cards(self):
         room = make_room_with_players(2)
@@ -437,7 +442,7 @@ class TestDoubleDown(unittest.TestCase):
         # Hit first to get 3 cards
         eng.hit(room, current_pid)
 
-        if room.players[current_pid].status == "bust":
+        if room.players[current_pid].hands[0]["status"] == "bust":
             return
 
         with self.assertRaises(ValueError):
@@ -445,153 +450,139 @@ class TestDoubleDown(unittest.TestCase):
 
 
 class TestDealerLogic(unittest.TestCase):
-    def test_determine_outcome_win(self):
+    def test_determine_hand_outcome_win(self):
         eng = GameEngine()
-        player = PlayerState(name="Test", player_id="p1")
-        player.hand = [make_card("10"), make_card("9")]  # 19
-        player.status = "standing"
+        hand = create_hand_dict([make_card("10"), make_card("9")], 100)  # 19
+        hand["status"] = "standing"
         dealer_hand = [make_card("10"), make_card("7")]  # 17
 
-        result = eng._determine_outcome(player, dealer_hand)
+        result = eng._determine_hand_outcome(hand, dealer_hand, False)
         self.assertEqual(result, "win")
 
-    def test_determine_outcome_lose(self):
+    def test_determine_hand_outcome_lose(self):
         eng = GameEngine()
-        player = PlayerState(name="Test", player_id="p1")
-        player.hand = [make_card("10"), make_card("7")]  # 17
-        player.status = "standing"
+        hand = create_hand_dict([make_card("10"), make_card("7")], 100)  # 17
+        hand["status"] = "standing"
         dealer_hand = [make_card("10"), make_card("9")]  # 19
 
-        result = eng._determine_outcome(player, dealer_hand)
+        result = eng._determine_hand_outcome(hand, dealer_hand, False)
         self.assertEqual(result, "lose")
 
-    def test_determine_outcome_push(self):
+    def test_determine_hand_outcome_push(self):
         eng = GameEngine()
-        player = PlayerState(name="Test", player_id="p1")
-        player.hand = [make_card("10"), make_card("8")]  # 18
-        player.status = "standing"
+        hand = create_hand_dict([make_card("10"), make_card("8")], 100)  # 18
+        hand["status"] = "standing"
         dealer_hand = [make_card("10"), make_card("8")]  # 18
 
-        result = eng._determine_outcome(player, dealer_hand)
+        result = eng._determine_hand_outcome(hand, dealer_hand, False)
         self.assertEqual(result, "push")
 
-    def test_determine_outcome_dealer_bust(self):
+    def test_determine_hand_outcome_dealer_bust(self):
         eng = GameEngine()
-        player = PlayerState(name="Test", player_id="p1")
-        player.hand = [make_card("10"), make_card("8")]  # 18
-        player.status = "standing"
+        hand = create_hand_dict([make_card("10"), make_card("8")], 100)  # 18
+        hand["status"] = "standing"
         dealer_hand = [make_card("10"), make_card("6"), make_card("K")]  # 26
 
-        result = eng._determine_outcome(player, dealer_hand)
+        result = eng._determine_hand_outcome(hand, dealer_hand, False)
         self.assertEqual(result, "dealerBust")
 
-    def test_determine_outcome_bust(self):
+    def test_determine_hand_outcome_bust(self):
         eng = GameEngine()
-        player = PlayerState(name="Test", player_id="p1")
-        player.hand = [make_card("10"), make_card("10"), make_card("5")]  # 25
-        player.status = "bust"
+        hand = create_hand_dict(
+            [make_card("10"), make_card("10"), make_card("5")], 100
+        )  # 25
+        hand["status"] = "bust"
 
-        result = eng._determine_outcome(player, [make_card("10"), make_card("7")])
+        result = eng._determine_hand_outcome(
+            hand, [make_card("10"), make_card("7")], False
+        )
         self.assertEqual(result, "bust")
 
-    def test_determine_outcome_blackjack(self):
+    def test_determine_hand_outcome_blackjack(self):
         eng = GameEngine()
-        player = PlayerState(name="Test", player_id="p1")
-        player.hand = [make_card("A"), make_card("K")]
-        player.status = "done"
+        hand = create_hand_dict([make_card("A"), make_card("K")], 100)
+        hand["status"] = "done"
         dealer_hand = [make_card("10"), make_card("9")]
 
-        result = eng._determine_outcome(player, dealer_hand)
+        result = eng._determine_hand_outcome(hand, dealer_hand, False)
         self.assertEqual(result, "blackjack")
 
-    def test_determine_outcome_both_blackjack_push(self):
+    def test_determine_hand_outcome_both_blackjack_push(self):
         eng = GameEngine()
-        player = PlayerState(name="Test", player_id="p1")
-        player.hand = [make_card("A"), make_card("K")]
-        player.status = "done"
+        hand = create_hand_dict([make_card("A"), make_card("K")], 100)
+        hand["status"] = "done"
         dealer_hand = [make_card("A"), make_card("Q")]
 
-        result = eng._determine_outcome(player, dealer_hand)
+        result = eng._determine_hand_outcome(hand, dealer_hand, False)
         self.assertEqual(result, "push")
 
+    def test_split_hand_21_not_blackjack(self):
+        """Split hand with A+K should be 'win', not 'blackjack'."""
+        eng = GameEngine()
+        hand = create_hand_dict([make_card("A"), make_card("K")], 100)
+        hand["status"] = "standing"
+        dealer_hand = [make_card("10"), make_card("7")]
 
-class TestPayout(unittest.TestCase):
-    def setUp(self):
-        self.eng = GameEngine()
+        result = eng._determine_hand_outcome(hand, dealer_hand, True)
+        self.assertEqual(result, "win")  # NOT blackjack for split hands
 
-    def test_blackjack_payout(self):
-        player = PlayerState(name="Test", player_id="p1")
-        player.bet = 100
-        delta = self.eng._calculate_payout(player, "blackjack")
-        self.assertEqual(delta, 150)  # 1.5x
+    def test_aggregate_result_mixed(self):
+        eng = GameEngine()
+        self.assertEqual(
+            eng._determine_aggregate_result(["win", "bust"]), "mixed"
+        )
 
-    def test_win_payout(self):
-        player = PlayerState(name="Test", player_id="p1")
-        player.bet = 100
-        delta = self.eng._calculate_payout(player, "win")
-        self.assertEqual(delta, 100)
+    def test_aggregate_result_all_win(self):
+        eng = GameEngine()
+        self.assertEqual(
+            eng._determine_aggregate_result(["win", "win"]), "win"
+        )
+        # dealerBust is preferred over win when both present
+        self.assertEqual(
+            eng._determine_aggregate_result(["win", "dealerBust"]), "dealerBust"
+        )
 
-    def test_dealer_bust_payout(self):
-        player = PlayerState(name="Test", player_id="p1")
-        player.bet = 100
-        delta = self.eng._calculate_payout(player, "dealerBust")
-        self.assertEqual(delta, 100)
-
-    def test_push_payout(self):
-        player = PlayerState(name="Test", player_id="p1")
-        player.bet = 100
-        delta = self.eng._calculate_payout(player, "push")
-        self.assertEqual(delta, 0)
-
-    def test_lose_payout(self):
-        player = PlayerState(name="Test", player_id="p1")
-        player.bet = 100
-        delta = self.eng._calculate_payout(player, "lose")
-        self.assertEqual(delta, -100)
-
-    def test_bust_payout(self):
-        player = PlayerState(name="Test", player_id="p1")
-        player.bet = 100
-        delta = self.eng._calculate_payout(player, "bust")
-        self.assertEqual(delta, -100)
-
-    def test_payout_with_asset(self):
-        player = PlayerState(name="Test", player_id="p1")
-        player.bet = 100
-        player.betted_assets = [ASSET_MAP["watch"]]  # value=500
-        delta = self.eng._calculate_payout(player, "win")
-        self.assertEqual(delta, 600)  # 100 + 500
-
-    def test_blackjack_payout_with_asset(self):
-        player = PlayerState(name="Test", player_id="p1")
-        player.bet = 100
-        player.betted_assets = [ASSET_MAP["watch"]]  # value=500
-        delta = self.eng._calculate_payout(player, "blackjack")
-        self.assertEqual(delta, 900)  # floor(1.5 * 600)
+    def test_aggregate_result_all_bust(self):
+        eng = GameEngine()
+        self.assertEqual(
+            eng._determine_aggregate_result(["bust", "bust"]), "bust"
+        )
 
 
 class TestResolveHands(unittest.TestCase):
-    def test_assets_returned_on_win(self):
+    def _setup_for_resolve(self, p0_cards, p1_cards, dealer_cards, p0_bet=100, p1_bet=100):
+        """Helper: create room with players' hands set up for resolution."""
         eng = GameEngine()
         room = make_room_with_players(2)
         eng.start_game(room)
 
         p0 = room.players["player0"]
-        p0.hand = [make_card("10"), make_card("9")]  # 19
+        p0.hands = [create_hand_dict(p0_cards, p0_bet)]
+        p0.hands[0]["status"] = "standing"
         p0.status = "standing"
-        p0.bet = 100
+        p0.bankroll = STARTING_BANKROLL
+
+        p1 = room.players["player1"]
+        p1.hands = [create_hand_dict(p1_cards, p1_bet)]
+        p1.hands[0]["status"] = "standing"
+        p1.status = "standing"
+
+        room.dealer_hand = dealer_cards
+        room.turn_order = ["player0", "player1"]
+        room.phase = "dealer_turn"
+
+        return room, eng, p0, p1
+
+    def test_assets_returned_on_win(self):
+        room, eng, p0, p1 = self._setup_for_resolve(
+            [make_card("10"), make_card("9")],  # 19
+            [make_card("10"), make_card("8")],  # 18
+            [make_card("10"), make_card("7")],  # 17
+        )
+
         p0.betted_assets = [dict(ASSET_MAP["watch"])]
         p0.owned_assets["watch"] = False
         p0.bankroll = 0
-
-        p1 = room.players["player1"]
-        p1.hand = [make_card("10"), make_card("8")]  # 18
-        p1.status = "standing"
-        p1.bet = 100
-
-        room.dealer_hand = [make_card("10"), make_card("7")]  # 17
-        room.turn_order = ["player0", "player1"]
-        room.phase = "dealer_turn"
 
         events = eng.resolve_all_hands(room)
 
@@ -599,25 +590,14 @@ class TestResolveHands(unittest.TestCase):
         self.assertTrue(p0.owned_assets["watch"])  # Returned
 
     def test_assets_lost_on_loss(self):
-        eng = GameEngine()
-        room = make_room_with_players(2)
-        eng.start_game(room)
+        room, eng, p0, p1 = self._setup_for_resolve(
+            [make_card("10"), make_card("6")],  # 16
+            [make_card("10"), make_card("8")],  # 18
+            [make_card("10"), make_card("9")],  # 19
+        )
 
-        p0 = room.players["player0"]
-        p0.hand = [make_card("10"), make_card("6")]  # 16
-        p0.status = "standing"
-        p0.bet = 100
         p0.betted_assets = [dict(ASSET_MAP["watch"])]
         p0.owned_assets["watch"] = False
-
-        p1 = room.players["player1"]
-        p1.hand = [make_card("10"), make_card("8")]
-        p1.status = "standing"
-        p1.bet = 100
-
-        room.dealer_hand = [make_card("10"), make_card("9")]  # 19
-        room.turn_order = ["player0", "player1"]
-        room.phase = "dealer_turn"
 
         events = eng.resolve_all_hands(room)
 
@@ -625,24 +605,11 @@ class TestResolveHands(unittest.TestCase):
         self.assertFalse(p0.owned_assets["watch"])  # Lost
 
     def test_stats_updated(self):
-        eng = GameEngine()
-        room = make_room_with_players(2)
-        eng.start_game(room)
-
-        p0 = room.players["player0"]
-        p0.hand = [make_card("10"), make_card("9")]
-        p0.status = "standing"
-        p0.bet = 100
-        p0.bankroll = STARTING_BANKROLL
-
-        p1 = room.players["player1"]
-        p1.hand = [make_card("10"), make_card("8")]
-        p1.status = "standing"
-        p1.bet = 100
-
-        room.dealer_hand = [make_card("10"), make_card("7")]
-        room.turn_order = ["player0", "player1"]
-        room.phase = "dealer_turn"
+        room, eng, p0, p1 = self._setup_for_resolve(
+            [make_card("10"), make_card("9")],  # 19
+            [make_card("10"), make_card("8")],  # 18
+            [make_card("10"), make_card("7")],  # 17
+        )
 
         eng.resolve_all_hands(room)
 
@@ -651,6 +618,148 @@ class TestResolveHands(unittest.TestCase):
         self.assertEqual(p0.lose_streak, 0)
         self.assertEqual(p0.bankroll, STARTING_BANKROLL + 100)
         self.assertEqual(p0.peak_bankroll, STARTING_BANKROLL + 100)
+
+    def test_split_hands_payout(self):
+        """Split hands: one wins, one loses = mixed result."""
+        eng = GameEngine()
+        room = make_room_with_players(1)
+        eng.start_game(room)
+
+        p0 = room.players["player0"]
+        p0.hands = [
+            create_hand_dict([make_card("10"), make_card("9")], 500),  # 19, wins
+            create_hand_dict([make_card("10"), make_card("6")], 500),  # 16, loses
+        ]
+        p0.hands[0]["status"] = "standing"
+        p0.hands[1]["status"] = "standing"
+        p0.status = "standing"
+        p0.bankroll = 10000
+
+        room.dealer_hand = [make_card("10"), make_card("8")]  # 18
+        room.turn_order = ["player0"]
+        room.phase = "dealer_turn"
+
+        eng.resolve_all_hands(room)
+
+        self.assertEqual(p0.result, "mixed")
+        self.assertEqual(p0.hands[0]["payout"], 500)
+        self.assertEqual(p0.hands[1]["payout"], -500)
+        self.assertEqual(p0.bankroll, 10000)  # Net zero
+
+    def test_split_assets_on_hand0(self):
+        """Assets tied to hand[0]: returned if hand[0] wins."""
+        eng = GameEngine()
+        room = make_room_with_players(1)
+        eng.start_game(room)
+
+        p0 = room.players["player0"]
+        p0.hands = [
+            create_hand_dict([make_card("10"), make_card("9")], 500),  # wins
+            create_hand_dict([make_card("10"), make_card("6")], 500),  # loses
+        ]
+        p0.hands[0]["status"] = "standing"
+        p0.hands[1]["status"] = "standing"
+        p0.status = "standing"
+        p0.bankroll = 5000
+        p0.betted_assets = [{"id": "watch", "name": "Watch", "value": 500}]
+        p0.owned_assets["watch"] = False
+
+        room.dealer_hand = [make_card("10"), make_card("8")]
+        room.turn_order = ["player0"]
+        room.phase = "dealer_turn"
+
+        eng.resolve_all_hands(room)
+
+        # Hand[0] won, so assets returned
+        self.assertTrue(p0.owned_assets["watch"])
+        # Hand[0] payout includes asset value: (500 + 500) = 1000
+        self.assertEqual(p0.hands[0]["payout"], 1000)
+        # Hand[1] payout is just cash: -500
+        self.assertEqual(p0.hands[1]["payout"], -500)
+
+
+class TestSplit(unittest.TestCase):
+    def _setup_split(self, card1_rank="K", card2_rank="Q"):
+        """Set up a room with a splittable hand."""
+        room = make_room_with_players(1)
+        eng = GameEngine()
+        eng.start_game(room)
+
+        p = room.players["player0"]
+        p.status = "playing"
+        p.hands = [create_hand_dict(
+            [make_card(card1_rank), make_card(card2_rank)],
+            500,
+        )]
+        p.active_hand_index = 0
+        p.bankroll = 10000
+
+        room.turn_order = ["player0"]
+        room.phase = "playing"
+        room.current_player_idx = 0
+        room.deck = shuffle_deck(create_deck())
+
+        return room, eng, p
+
+    def test_split_creates_two_hands(self):
+        room, eng, p = self._setup_split("K", "Q")
+        events = eng.split(room, "player0")
+
+        self.assertEqual(len(p.hands), 2)
+        self.assertEqual(p.hands[0]["bet"], 500)
+        self.assertEqual(p.hands[1]["bet"], 500)
+        self.assertEqual(p.hands[0]["cards"][0]["rank"], "K")
+        self.assertEqual(p.hands[1]["cards"][0]["rank"], "Q")
+        self.assertTrue(any(e["type"] == "player_split" for e in events))
+
+    def test_split_aces_auto_stand(self):
+        room, eng, p = self._setup_split("A", "A")
+        eng.split(room, "player0")
+
+        self.assertTrue(p.hands[0]["is_split_aces"])
+        self.assertTrue(p.hands[1]["is_split_aces"])
+        self.assertEqual(p.hands[0]["status"], "standing")
+        self.assertEqual(p.hands[1]["status"], "standing")
+
+    def test_cannot_resplit_aces(self):
+        room, eng, p = self._setup_split("A", "A")
+        eng.split(room, "player0")
+
+        # Even if hand[0] got another ace, can't re-split
+        p.hands[0]["cards"] = [make_card("A"), make_card("A")]
+        p.hands[0]["status"] = "playing"
+        p.status = "playing"
+        p.active_hand_index = 0
+
+        with self.assertRaises(ValueError):
+            eng.split(room, "player0")
+
+    def test_cannot_split_different_values(self):
+        room, eng, p = self._setup_split("K", "9")
+        with self.assertRaises(ValueError):
+            eng.split(room, "player0")
+
+    def test_max_split_hands(self):
+        room, eng, p = self._setup_split("K", "Q")
+
+        # Fill up to 4 hands
+        p.hands = [
+            create_hand_dict([make_card("K"), make_card("Q")], 500),
+            create_hand_dict([make_card("10"), make_card("J")], 500),
+            create_hand_dict([make_card("10"), make_card("K")], 500),
+            create_hand_dict([make_card("10"), make_card("Q")], 500),
+        ]
+
+        with self.assertRaises(ValueError):
+            eng.split(room, "player0")
+
+    def test_split_no_bankroll_check(self):
+        """Splitting never blocked by bankroll — casino extends infinite credit."""
+        room, eng, p = self._setup_split("K", "Q")
+        p.bankroll = -100000
+
+        events = eng.split(room, "player0")
+        self.assertEqual(len(p.hands), 2)  # Split succeeded despite negative bankroll
 
 
 class TestReshuffle(unittest.TestCase):
@@ -687,6 +796,19 @@ class TestGetRoomState(unittest.TestCase):
         state = eng.get_room_state(room, hide_dealer_hole=True)
         self.assertEqual(state["dealer_hand"][0]["rank"], "A")
         self.assertEqual(state["dealer_hand"][1]["rank"], "K")
+
+    def test_serialized_player_has_hands(self):
+        eng = GameEngine()
+        room = make_room_with_players(1)
+        p = room.players["player0"]
+        p.hands = [create_hand_dict([make_card("10"), make_card("K")], 500)]
+
+        state = eng.get_room_state(room)
+        p_state = state["players"]["player0"]
+        self.assertIn("hands", p_state)
+        self.assertEqual(len(p_state["hands"]), 1)
+        self.assertEqual(p_state["hands"][0]["hand_value"], 20)
+        self.assertIn("active_hand_index", p_state)
 
 
 class TestHandlePlayerDeparture(unittest.TestCase):

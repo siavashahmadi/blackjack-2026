@@ -82,6 +82,27 @@ export function useDealerMessage(state, dispatch) {
     dispatch(setDealerMessage(message, updatedShownLines))
   }, [state.bettedAssets.length, dispatch])
 
+  // Split messages — fires when playerHands.length increases during playing
+  useEffect(() => {
+    if (state.phase !== 'playing') return
+    if (!state.playerHands || state.playerHands.length <= 1) return
+
+    const prevState = prevStateRef.current
+    const prevLen = prevState.playerHands?.length ?? 0
+    if (state.playerHands.length <= prevLen) return
+
+    const result = determineDealerCategory(prevState, state, 'split')
+    if (!result) return
+
+    const { category, context } = result
+    const { message, updatedShownLines } = selectDealerLine(
+      category,
+      state.shownDealerLines,
+      context
+    )
+    dispatch(setDealerMessage(message, updatedShownLines))
+  }, [state.playerHands?.length, state.phase, dispatch])
+
   // Game reset — greeting when handsPlayed drops to 0
   useEffect(() => {
     if (state.handsPlayed !== 0) return

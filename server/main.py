@@ -503,7 +503,7 @@ async def handle_reconnect(player_id_from_msg: str, code: str, websocket: WebSoc
 
 
 async def handle_game_action(player_id: str, message: dict):
-    """Handle game actions (place_bet, hit, stand, double_down, bet_asset).
+    """Handle game actions (place_bet, hit, stand, double_down, split, bet_asset).
 
     Routes to the appropriate GameEngine method, broadcasts results.
     """
@@ -538,6 +538,8 @@ async def handle_game_action(player_id: str, message: dict):
             events = engine.stand(room, player_id)
         elif msg_type == "double_down":
             events = engine.double_down(room, player_id)
+        elif msg_type == "split":
+            events = engine.split(room, player_id)
         else:
             await manager.send_to_player(
                 player_id,
@@ -730,7 +732,7 @@ async def handle_message(player_id: str, message: dict):
         await handle_quick_chat(player_id, message)
     elif msg_type == "view_stats":
         await handle_view_stats(player_id)
-    elif msg_type in ("place_bet", "bet_asset", "hit", "stand", "double_down"):
+    elif msg_type in ("place_bet", "bet_asset", "hit", "stand", "double_down", "split"):
         await handle_game_action(player_id, message)
     else:
         await manager.send_to_player(

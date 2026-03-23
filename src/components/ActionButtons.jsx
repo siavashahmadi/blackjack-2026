@@ -1,6 +1,6 @@
 import styles from './ActionButtons.module.css'
 
-function ActionButtons({ onHit, onStand, onDoubleDown, canDoubleDown }) {
+function ActionButtons({ onHit, onStand, onDoubleDown, canDoubleDown, onSplit, canSplit }) {
   return (
     <div className={styles.actions}>
       <button className={`${styles.button} ${styles.hit}`} onClick={onHit}>
@@ -9,6 +9,11 @@ function ActionButtons({ onHit, onStand, onDoubleDown, canDoubleDown }) {
       <button className={`${styles.button} ${styles.stand}`} onClick={onStand}>
         STAND
       </button>
+      {canSplit && (
+        <button className={`${styles.button} ${styles.split}`} onClick={onSplit}>
+          SPLIT
+        </button>
+      )}
       <button
         className={`${styles.button} ${styles.doubleDown}${!canDoubleDown ? ` ${styles.disabled}` : ''}`}
         onClick={canDoubleDown ? onDoubleDown : undefined}

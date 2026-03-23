@@ -1,3 +1,4 @@
+/* --- Base Chip Styles --- */
 .chip {
   border-radius: 50%;
   position: relative;
@@ -10,7 +11,7 @@
   transition: transform 0.1s ease, box-shadow 0.15s ease;
   flex-shrink: 0;
 
-  /* Rim with 6 evenly spaced edge spots (20deg spot, 40deg gap, x6 = 360deg) */
+  /* Rim with 6 edge spots (unchanged math) */
   background: conic-gradient(
     var(--chip-spot) 0deg,   var(--chip-spot) 20deg,
     var(--chip-rim) 20deg,   var(--chip-rim) 60deg,
@@ -26,44 +27,64 @@
     var(--chip-rim) 320deg,  var(--chip-rim) 360deg
   );
 
+  /* HARMONY UPDATE: Uses Deep Green (rgba 10, 30, 10) instead of pure black for felt shadows */
   box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.45),
-    0 1px 1px rgba(0, 0, 0, 0.25),
-    inset 0 1px 1px rgba(255, 255, 255, 0.12);
+    inset 0 1px 2px rgba(255, 255, 255, 0.5), /* Top edge light */
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),      /* Bottom edge shadow */
+    0 4px 0 rgba(10, 30, 10, 0.7),            /* 3D Green-tinted thickness */
+    0 6px 10px rgba(10, 30, 10, 0.5);         /* Soft drop shadow on felt */
 }
 
-/* Inner face — main pastel chip color */
+/* Inner face — Matte and Recessed */
 .chip::before {
   content: '';
   position: absolute;
   border-radius: 50%;
   background: var(--chip-face);
   box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.1),
-    inset 0 1px 2px rgba(255, 255, 255, 0.1),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.12);
+    /* Deeper inner recess shadow */
+    inset 0 3px 6px rgba(10, 30, 10, 0.4),
+    /* Subtle inner bottom highlight */
+    inset 0 -1px 2px rgba(255, 255, 255, 0.3),
+    /* Matte ridge highlight */
+    0 1px 1px rgba(255, 255, 255, 0.2);
 }
 
-/* Dashed decorative ring */
+/* Dynamic dashed decorative ring */
 .chip::after {
   content: '';
   position: absolute;
   border-radius: 50%;
-  border: 1.5px dashed rgba(255, 255, 255, 0.2);
+  /* Matches text color for tonal consistency */
+  border: 1.2px dashed var(--chip-text);
+  opacity: 0.25;
 }
 
-/* Label text — MUST be above ::before */
+/* Label text */
 .label {
   position: relative;
   z-index: 1;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   color: var(--chip-text);
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.1); /* Subtle "stamped" highlight */
 }
 
+/* --- The 1M Specialty Pop --- */
+/* Target by label or value if passed as a prop/data-attribute */
+.chip[data-value="1000000"],
+.chip.million {
+  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.4)); /* Electric Aqua ambient glow */
+}
+
+/* Click effect (Pushing into the felt) */
 .chip:active {
-  transform: scale(0.93);
+  transform: translateY(3px) scale(0.96);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 1px 0 rgba(10, 30, 10, 0.7),
+    0 2px 4px rgba(10, 30, 10, 0.5);
 }
 
 /* --- Tray size (52px) --- */
@@ -72,108 +93,50 @@
   height: 52px;
 }
 
-.tray .label {
-  font-size: 13px;
-}
-
-.tray::before {
-  top: 5px;
-  left: 5px;
-  right: 5px;
-  bottom: 5px;
-}
-
-.tray::after {
-  top: 9px;
-  left: 9px;
-  right: 9px;
-  bottom: 9px;
-}
+.tray .label { font-size: 14px; }
+.tray::before { top: 6px; left: 6px; right: 6px; bottom: 6px; }
+.tray::after { top: 11px; left: 11px; right: 11px; bottom: 11px; }
 
 /* --- Stack size (36px) --- */
 .stack {
   width: 36px;
   height: 36px;
-}
-
-.stack .label {
-  font-size: 10px;
-}
-
-.stack::before {
-  top: 4px;
-  left: 4px;
-  right: 4px;
-  bottom: 4px;
-}
-
-.stack::after {
-  top: 7px;
-  left: 7px;
-  right: 7px;
-  bottom: 7px;
-  border-width: 1px;
-}
-
-/* --- States --- */
-.selected {
+  /* Proportional 3D edge for smaller stack */
   box-shadow:
-    0 0 14px var(--chip-glow),
-    0 0 6px var(--chip-glow),
-    0 2px 4px rgba(0, 0, 0, 0.45),
-    inset 0 1px 1px rgba(255, 255, 255, 0.12);
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    0 2px 0 rgba(10, 30, 10, 0.7),
+    0 3px 5px rgba(10, 30, 10, 0.5);
+}
+
+.stack .label { font-size: 10px; }
+.stack::before { top: 4px; left: 4px; right: 4px; bottom: 4px; }
+.stack::after { top: 8px; left: 8px; right: 8px; bottom: 8px; border-width: 1px; }
+
+/* --- Selection State --- */
+.selected {
+  /* Glowing ring that doesn't hide the 3D edge */
+  box-shadow:
+    0 0 18px var(--chip-glow),
+    0 0 8px var(--chip-glow),
+    0 4px 0 rgba(10, 30, 10, 0.7),
+    0 6px 10px rgba(10, 30, 10, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.5);
 }
 
 .animate {
   animation: chipBounce 0.3s ease-out both;
 }
 
-/* --- Small screens --- */
+/* --- Mobile Responsive --- */
 @media (max-width: 374px) {
-  .tray {
-    width: 44px;
-    height: 44px;
-  }
+  .tray { width: 44px; height: 44px; }
+  .tray .label { font-size: 12px; }
+  .tray::before { top: 5px; left: 5px; right: 5px; bottom: 5px; }
+  .tray::after { top: 9px; left: 9px; right: 9px; bottom: 9px; }
 
-  .tray .label {
-    font-size: 11px;
-  }
-
-  .tray::before {
-    top: 4px;
-    left: 4px;
-    right: 4px;
-    bottom: 4px;
-  }
-
-  .tray::after {
-    top: 7px;
-    left: 7px;
-    right: 7px;
-    bottom: 7px;
-  }
-
-  .stack {
-    width: 32px;
-    height: 32px;
-  }
-
-  .stack .label {
-    font-size: 9px;
-  }
-
-  .stack::before {
-    top: 3px;
-    left: 3px;
-    right: 3px;
-    bottom: 3px;
-  }
-
-  .stack::after {
-    top: 6px;
-    left: 6px;
-    right: 6px;
-    bottom: 6px;
-    border-width: 1px;
-  }
+  .stack { width: 32px; height: 32px; }
+  .stack .label { font-size: 9px; }
+  .stack::before { top: 3px; left: 3px; right: 3px; bottom: 3px; }
+  .stack::after { top: 6px; left: 6px; right: 6px; bottom: 6px; }
 }

@@ -176,4 +176,15 @@ export const DEALER_LINES = {
     "Rock bottom has a basement, and you found the sub-basement.",
     "Your debt has its own zip code at this point.",
   ],
+
+  playerSplit: [
+    "Splitting, huh? Twice the hands, twice the ways to lose.",
+    "Oh good, you want to lose FASTER.",
+    "Two hands means double the bet. I love your ambition.",
+    "More hands, more chances for me. I mean you. Definitely you.",
+    "Splitting pairs? Bold move. Let's see how this plays out.",
+    "The only thing you're doubling here is my entertainment.",
+    "Split Aces? That's the smartest thing you've done all night. Don't get used to it.",
+    "Four hands?! Someone call the pit boss, we've got a maniac over here.",
+  ],
 }

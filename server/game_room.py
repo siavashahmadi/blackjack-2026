@@ -23,13 +23,13 @@ class PlayerState:
 
     # Game state
     bankroll: int = STARTING_BANKROLL
-    hand: list = field(default_factory=list)
-    bet: int = 0
+    hands: list = field(default_factory=list)  # list of hand dicts
+    active_hand_index: int = 0
+    bet: int = 0  # initial bet (betting phase only, moved to hand dict on deal)
     betted_assets: list = field(default_factory=list)
     owned_assets: dict = field(default_factory=lambda: dict(DEFAULT_OWNED_ASSETS))
     status: str = "idle"  # idle|betting|ready|playing|standing|bust|done
-    is_doubled_down: bool = False
-    result: str | None = None  # per-player outcome: blackjack|win|lose|bust|push|dealerBust
+    result: str | None = None  # per-player aggregate outcome
 
     # Vig tracking
     vig_amount: int = 0
@@ -190,11 +190,11 @@ def get_current_player(room: GameRoom) -> PlayerState | None:
 
 def reset_round_state(player: PlayerState):
     """Reset per-round state for a new round. Keeps bankroll, assets, stats."""
-    player.hand = []
+    player.hands = []
+    player.active_hand_index = 0
     player.bet = 0
     player.betted_assets = []
     player.status = "betting"
-    player.is_doubled_down = False
     player.result = None
     player.vig_amount = 0
     player.vig_rate = 0.0

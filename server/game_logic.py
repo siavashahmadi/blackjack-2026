@@ -8,6 +8,7 @@ import asyncio
 import math
 
 from card_engine import (
+    card_value,
     create_deck,
     draw_cards,
     hand_value,
@@ -27,6 +28,21 @@ from constants import (
     get_vig_rate,
 )
 from game_room import GameRoom, PlayerState, get_active_players, reset_round_state
+
+MAX_SPLIT_HANDS = 4
+
+
+def create_hand_dict(cards=None, bet=0):
+    """Create a new hand dict with default values."""
+    return {
+        "cards": cards if cards is not None else [],
+        "bet": bet,
+        "is_doubled_down": False,
+        "is_split_aces": False,
+        "status": "playing",
+        "result": None,
+        "payout": 0,
+    }
 
 
 class GameEngine:
@@ -158,17 +174,21 @@ class GameEngine:
         total_cards_needed = (num_players + 1) * 2
         drawn, room.deck = draw_cards(room.deck, total_cards_needed)
 
-        # Distribute cards
+        # Distribute cards — create hand dicts
         for i, pid in enumerate(active_pids):
-            room.players[pid].hand = [drawn[i], drawn[num_players + 1 + i]]
-            room.players[pid].status = "playing"
+            player = room.players[pid]
+            cards = [drawn[i], drawn[num_players + 1 + i]]
+            player.hands = [create_hand_dict(cards, player.bet)]
+            player.active_hand_index = 0
+            player.status = "playing"
 
         room.dealer_hand = [drawn[num_players], drawn[num_players * 2 + 1]]
 
         # Calculate and apply vig for each player's borrowed portion
         for pid in active_pids:
             player = room.players[pid]
-            borrowed = max(0, player.bet - max(0, player.bankroll))
+            hand = player.hands[0]
+            borrowed = max(0, hand["bet"] - max(0, player.bankroll))
             if borrowed > 0:
                 rate = get_vig_rate(player.bankroll)
                 vig = math.floor(borrowed * rate)
@@ -184,17 +204,24 @@ class GameEngine:
 
         for pid in active_pids:
             player = room.players[pid]
-            player_bj = is_blackjack(player.hand)
+            hand = player.hands[0]
+            player_bj = is_blackjack(hand["cards"])
 
             if player_bj and dealer_bj:
                 player.status = "done"
                 player.result = "push"
+                hand["status"] = "done"
+                hand["result"] = "push"
             elif player_bj:
                 player.status = "done"
                 player.result = "blackjack"
+                hand["status"] = "done"
+                hand["result"] = "blackjack"
             elif dealer_bj:
                 player.status = "done"
                 player.result = "lose"
+                hand["status"] = "done"
+                hand["result"] = "lose"
 
         # If dealer has blackjack or all players are done, skip to resolution
         all_done = all(room.players[pid].status == "done" for pid in active_pids)
@@ -229,38 +256,64 @@ class GameEngine:
     # --- Player Actions ---
 
     def hit(self, room: GameRoom, player_id: str) -> list[dict]:
-        """Draw a card for the player. Check for bust."""
+        """Draw a card for the active hand. Check for bust / auto-stand on 21."""
         player = self._validate_player_turn(room, player_id)
+        hand_index = player.active_hand_index
+        hand = player.hands[hand_index]
 
-        if player.is_doubled_down:
+        if hand["is_doubled_down"]:
             raise ValueError("Cannot hit after doubling down")
+        if hand["is_split_aces"]:
+            raise ValueError("Cannot hit split aces")
 
         drawn, room.deck = draw_cards(room.deck, 1)
-        player.hand.append(drawn[0])
+        hand["cards"].append(drawn[0])
 
         events = []
+        val = hand_value(hand["cards"])
 
-        if hand_value(player.hand) > 21:
-            player.status = "bust"
-            player.result = "bust"
+        if val > 21:
+            hand["status"] = "bust"
+            hand["result"] = "bust"
+            has_more = self._advance_hand(player)
             events.append(
                 {
                     "type": "player_hit",
                     "player_id": player_id,
                     "card": drawn[0],
-                    "hand_value": hand_value(player.hand),
+                    "hand_index": hand_index,
+                    "hand_value": val,
                     "bust": True,
                     "state": self.get_room_state(room),
                 }
             )
-            events.extend(self._advance_turn(room))
+            if not has_more:
+                events.extend(self._advance_turn(room))
+        elif val == 21 and len(player.hands) > 1:
+            # Auto-stand on 21 for split hands
+            hand["status"] = "standing"
+            has_more = self._advance_hand(player)
+            events.append(
+                {
+                    "type": "player_hit",
+                    "player_id": player_id,
+                    "card": drawn[0],
+                    "hand_index": hand_index,
+                    "hand_value": val,
+                    "bust": False,
+                    "state": self.get_room_state(room),
+                }
+            )
+            if not has_more:
+                events.extend(self._advance_turn(room))
         else:
             events.append(
                 {
                     "type": "player_hit",
                     "player_id": player_id,
                     "card": drawn[0],
-                    "hand_value": hand_value(player.hand),
+                    "hand_index": hand_index,
+                    "hand_value": val,
                     "bust": False,
                     "state": self.get_room_state(room),
                 }
@@ -269,67 +322,179 @@ class GameEngine:
         return events
 
     def stand(self, room: GameRoom, player_id: str) -> list[dict]:
-        """Player stands. Advance to next player or dealer turn."""
+        """Player stands on the active hand. Advance to next hand or next player."""
         player = self._validate_player_turn(room, player_id)
+        hand_index = player.active_hand_index
+        hand = player.hands[hand_index]
 
-        player.status = "standing"
+        hand["status"] = "standing"
+        has_more = self._advance_hand(player)
 
         events = [
             {
                 "type": "player_stand",
                 "player_id": player_id,
+                "hand_index": hand_index,
                 "state": self.get_room_state(room),
             }
         ]
-        events.extend(self._advance_turn(room))
+        if not has_more:
+            events.extend(self._advance_turn(room))
 
         return events
 
     def double_down(self, room: GameRoom, player_id: str) -> list[dict]:
-        """Double bet, draw one card, auto-stand."""
+        """Double bet on the active hand, draw one card, auto-stand."""
         player = self._validate_player_turn(room, player_id)
+        hand_index = player.active_hand_index
+        hand = player.hands[hand_index]
 
-        if len(player.hand) != 2:
+        if len(hand["cards"]) != 2:
             raise ValueError("Can only double down on first two cards")
+        if hand["is_split_aces"]:
+            raise ValueError("Cannot double down on split aces")
 
-        player.bet *= 2
-        player.is_doubled_down = True
+        # Calculate vig on the additional bet (doubling the existing bet)
+        additional_bet = hand["bet"]
+        borrowed = max(0, additional_bet - max(0, player.bankroll))
+        if borrowed > 0:
+            rate = get_vig_rate(player.bankroll)
+            vig = math.floor(borrowed * rate)
+            if vig > 0:
+                player.bankroll -= vig
+                player.vig_amount += vig
+                player.vig_rate = rate
+                player.total_vig_paid += vig
+
+        hand["bet"] *= 2
+        hand["is_doubled_down"] = True
 
         drawn, room.deck = draw_cards(room.deck, 1)
-        player.hand.append(drawn[0])
+        hand["cards"].append(drawn[0])
+
+        val = hand_value(hand["cards"])
+
+        if val > 21:
+            hand["status"] = "bust"
+            hand["result"] = "bust"
+        else:
+            hand["status"] = "standing"
+
+        has_more = self._advance_hand(player)
+
+        events = [
+            {
+                "type": "player_double_down",
+                "player_id": player_id,
+                "card": drawn[0],
+                "hand_index": hand_index,
+                "new_bet": hand["bet"],
+                "hand_value": val,
+                "bust": val > 21,
+                "state": self.get_room_state(room),
+            }
+        ]
+        if not has_more:
+            events.extend(self._advance_turn(room))
+
+        return events
+
+    def split(self, room: GameRoom, player_id: str) -> list[dict]:
+        """Split the active hand into two hands."""
+        player = self._validate_player_turn(room, player_id)
+
+        if len(player.hands) >= MAX_SPLIT_HANDS:
+            raise ValueError("Maximum split hands reached")
+
+        hand_index = player.active_hand_index
+        hand = player.hands[hand_index]
+
+        if len(hand["cards"]) != 2:
+            raise ValueError("Can only split with exactly two cards")
+        if hand["is_split_aces"]:
+            raise ValueError("Cannot re-split aces")
+        if card_value(hand["cards"][0]) != card_value(hand["cards"][1]):
+            raise ValueError("Can only split cards of equal value")
+
+        drawn, room.deck = draw_cards(room.deck, 2)
+        is_aces = hand["cards"][0]["rank"] == "A"
+        original_bet = hand["bet"]
+
+        # Calculate vig on the new hand's bet (borrowed portion)
+        borrowed = max(0, original_bet - max(0, player.bankroll))
+        if borrowed > 0:
+            rate = get_vig_rate(player.bankroll)
+            vig = math.floor(borrowed * rate)
+            if vig > 0:
+                player.bankroll -= vig
+                player.vig_amount += vig
+                player.vig_rate = rate
+                player.total_vig_paid += vig
+
+        # Create two new hands from the split
+        card1 = hand["cards"][0]
+        card2 = hand["cards"][1]
+
+        new_hand1 = create_hand_dict([card1, drawn[0]], original_bet)
+        new_hand2 = create_hand_dict([card2, drawn[1]], original_bet)
+
+        if is_aces:
+            new_hand1["is_split_aces"] = True
+            new_hand2["is_split_aces"] = True
+            new_hand1["status"] = "standing"
+            new_hand2["status"] = "standing"
+
+        # Replace current hand and insert new hand after it
+        player.hands[hand_index] = new_hand1
+        player.hands.insert(hand_index + 1, new_hand2)
 
         events = []
 
-        if hand_value(player.hand) > 21:
+        if is_aces:
+            # Both hands auto-stand, advance past them
+            has_more = self._advance_hand(player)
+            if not has_more:
+                events.extend(self._advance_turn(room))
+        else:
+            # Check if first hand has 21 — auto-stand
+            if hand_value(new_hand1["cards"]) == 21:
+                new_hand1["status"] = "standing"
+                has_more = self._advance_hand(player)
+                if not has_more:
+                    events.extend(self._advance_turn(room))
+
+        events.insert(0, {
+            "type": "player_split",
+            "player_id": player_id,
+            "hand_index": hand_index,
+            "active_hand_index": player.active_hand_index,
+            "state": self.get_room_state(room),
+        })
+
+        return events
+
+    # --- Hand Advancement ---
+
+    def _advance_hand(self, player: PlayerState) -> bool:
+        """Advance to the next playable hand for this player.
+
+        Returns True if the player has more hands to play, False if all hands are done.
+        """
+        next_idx = player.active_hand_index + 1
+        while next_idx < len(player.hands):
+            if player.hands[next_idx]["status"] == "playing":
+                player.active_hand_index = next_idx
+                return True
+            next_idx += 1
+
+        # All hands done
+        all_bust = all(h["status"] == "bust" for h in player.hands)
+        if all_bust:
             player.status = "bust"
             player.result = "bust"
-            events.append(
-                {
-                    "type": "player_double_down",
-                    "player_id": player_id,
-                    "card": drawn[0],
-                    "new_bet": player.bet,
-                    "hand_value": hand_value(player.hand),
-                    "bust": True,
-                    "state": self.get_room_state(room),
-                }
-            )
         else:
             player.status = "standing"
-            events.append(
-                {
-                    "type": "player_double_down",
-                    "player_id": player_id,
-                    "card": drawn[0],
-                    "new_bet": player.bet,
-                    "hand_value": hand_value(player.hand),
-                    "bust": False,
-                    "state": self.get_room_state(room),
-                }
-            )
-
-        events.extend(self._advance_turn(room))
-        return events
+        return False
 
     # --- Mid-Game Departure ---
 
@@ -438,7 +603,7 @@ class GameEngine:
     # --- Resolution ---
 
     def resolve_all_hands(self, room: GameRoom) -> list[dict]:
-        """Compare each player's hand to dealer. Calculate payouts. Update stats."""
+        """Compare each player's hands to dealer. Calculate payouts. Update stats."""
         dealer_val = hand_value(room.dealer_hand)
         dealer_bust = dealer_val > 21
         results = {}
@@ -448,44 +613,71 @@ class GameEngine:
                 continue
             player = room.players[pid]
 
-            # Determine outcome (may already be set for blackjack/bust)
-            if player.result is None:
-                player.result = self._determine_outcome(player, room.dealer_hand)
+            total_delta = 0
+            outcomes = []
+            is_split = len(player.hands) > 1
 
-            outcome = player.result
-            delta = self._calculate_payout(player, outcome)
+            for i, hand in enumerate(player.hands):
+                # Determine per-hand outcome
+                if hand["result"] is None:
+                    hand["result"] = self._determine_hand_outcome(
+                        hand, room.dealer_hand, is_split
+                    )
+
+                outcome = hand["result"]
+                outcomes.append(outcome)
+
+                # Per-hand payout — assets apply to hand[0] only
+                asset_value = (
+                    sum(a["value"] for a in player.betted_assets) if i == 0 else 0
+                )
+                total_bet = hand["bet"] + asset_value
+
+                if outcome == "blackjack":
+                    hand["payout"] = math.floor(BLACKJACK_PAYOUT * total_bet)
+                elif outcome in ("win", "dealerBust"):
+                    hand["payout"] = total_bet
+                elif outcome == "push":
+                    hand["payout"] = 0
+                else:  # lose, bust
+                    hand["payout"] = -total_bet
+
+                total_delta += hand["payout"]
 
             # Update bankroll
-            player.bankroll += delta
+            player.bankroll += total_delta
 
-            # Track asset stats before handling
+            # Aggregate result
+            player.result = self._determine_aggregate_result(outcomes)
+
+            # Asset handling — based on hand[0]'s result (assets tied to first hand)
             player.total_assets_bet += len(player.betted_assets)
-
-            # Handle assets
-            is_win_outcome = outcome in ("win", "dealerBust", "blackjack", "push")
-            if not is_win_outcome:
-                player.total_assets_lost += len(player.betted_assets)
-            if is_win_outcome:
-                # Return betted assets
-                for asset in player.betted_assets:
-                    player.owned_assets[asset["id"]] = True
-            # On loss: assets stay lost (owned_assets already set to False)
+            if player.hands:
+                hand0_result = player.hands[0]["result"]
+                hand0_win = hand0_result in ("win", "dealerBust", "blackjack", "push")
+                if hand0_win:
+                    # Return betted assets
+                    for asset in player.betted_assets:
+                        player.owned_assets[asset["id"]] = True
+                else:
+                    player.total_assets_lost += len(player.betted_assets)
+                # On loss: assets stay lost (owned_assets already set to False)
 
             # Update stats
-            is_win = outcome in ("win", "dealerBust", "blackjack")
-            is_loss = outcome in ("lose", "bust")
+            is_win = player.result in ("win", "dealerBust", "blackjack")
+            is_loss = player.result in ("lose", "bust")
 
             player.hands_played += 1
             if is_win:
                 player.win_streak += 1
                 player.lose_streak = 0
-                player.total_won += delta
+                player.total_won += total_delta
             elif is_loss:
                 player.lose_streak += 1
                 player.win_streak = 0
-                player.total_lost += abs(delta)
+                player.total_lost += abs(total_delta)
             else:
-                # Push — don't reset streaks
+                # Push or mixed — don't reset streaks
                 pass
 
             player.peak_bankroll = max(player.peak_bankroll, player.bankroll)
@@ -497,11 +689,20 @@ class GameEngine:
             results[pid] = {
                 "player_id": pid,
                 "player_name": player.name,
-                "outcome": outcome,
-                "delta": delta,
+                "outcome": player.result,
+                "delta": total_delta,
                 "bankroll": player.bankroll,
-                "hand_value": hand_value(player.hand),
-                "is_doubled_down": player.is_doubled_down,
+                "hands": [
+                    {
+                        "cards": h["cards"],
+                        "hand_value": hand_value(h["cards"]),
+                        "result": h["result"],
+                        "payout": h["payout"],
+                        "bet": h["bet"],
+                        "is_doubled_down": h["is_doubled_down"],
+                    }
+                    for h in player.hands
+                ],
             }
 
         room.phase = "result"
@@ -518,15 +719,19 @@ class GameEngine:
             }
         ]
 
-    def _determine_outcome(self, player: PlayerState, dealer_hand: list) -> str:
-        """Return the outcome for a single player vs the dealer."""
-        if player.status == "bust":
+    def _determine_hand_outcome(
+        self, hand: dict, dealer_hand: list, is_split: bool
+    ) -> str:
+        """Return the outcome for a single hand vs the dealer."""
+        if hand["status"] == "bust":
             return "bust"
 
-        player_val = hand_value(player.hand)
-        player_bj = is_blackjack(player.hand)
+        player_val = hand_value(hand["cards"])
         dealer_val = hand_value(dealer_hand)
         dealer_bj = is_blackjack(dealer_hand)
+
+        # Split hand 21 with 2 cards is NOT a natural blackjack — pays 1:1
+        player_bj = is_blackjack(hand["cards"]) and not is_split
 
         if player_bj and dealer_bj:
             return "push"
@@ -542,19 +747,23 @@ class GameEngine:
             return "win"
         return "push"
 
-    def _calculate_payout(self, player: PlayerState, outcome: str) -> int:
-        """Return the bankroll delta for a given outcome."""
-        asset_value = sum(a["value"] for a in player.betted_assets)
-        total_bet = player.bet + asset_value
-
-        if outcome == "blackjack":
-            return math.floor(BLACKJACK_PAYOUT * total_bet)
-        elif outcome in ("win", "dealerBust"):
-            return total_bet
-        elif outcome == "push":
-            return 0
-        else:  # lose, bust
-            return -total_bet
+    def _determine_aggregate_result(self, outcomes: list[str]) -> str:
+        """Determine the overall result from multiple hand outcomes."""
+        if len(outcomes) == 1:
+            return outcomes[0]
+        if "blackjack" in outcomes:
+            return "blackjack"
+        has_win = any(o in ("win", "dealerBust") for o in outcomes)
+        has_loss = any(o in ("lose", "bust") for o in outcomes)
+        if has_win and has_loss:
+            return "mixed"
+        if has_win:
+            return "dealerBust" if "dealerBust" in outcomes else "win"
+        if all(o == "push" for o in outcomes):
+            return "push"
+        if has_loss:
+            return "bust" if all(o == "bust" for o in outcomes) else "lose"
+        return "mixed"
 
     # --- State Serialization ---
 
@@ -592,15 +801,26 @@ class GameEngine:
             "name": player.name,
             "player_id": player.player_id,
             "bankroll": player.bankroll,
-            "hand": player.hand,
-            "hand_value": hand_value(player.hand) if player.hand else 0,
+            "hands": [
+                {
+                    "cards": h["cards"],
+                    "bet": h["bet"],
+                    "is_doubled_down": h["is_doubled_down"],
+                    "is_split_aces": h["is_split_aces"],
+                    "status": h["status"],
+                    "result": h["result"],
+                    "payout": h["payout"],
+                    "hand_value": hand_value(h["cards"]) if h["cards"] else 0,
+                }
+                for h in player.hands
+            ],
+            "active_hand_index": player.active_hand_index,
             "bet": player.bet,
             "betted_assets": player.betted_assets,
             "owned_assets": player.owned_assets,
             "status": player.status,
             "is_host": player.is_host,
             "connected": player.connected,
-            "is_doubled_down": player.is_doubled_down,
             "result": player.result,
             "vig_amount": player.vig_amount,
             "vig_rate": player.vig_rate,

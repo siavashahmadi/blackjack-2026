@@ -48,12 +48,13 @@ export function selectDealerLine(category, shownDealerLines, context = {}) {
  */
 export function determineDealerCategory(prevState, newState, trigger) {
   if (trigger === 'resolve') {
-    const { result, isDoubledDown, winStreak, loseStreak, bankroll } = newState
+    const { result, winStreak, loseStreak, bankroll } = newState
+    const anyDoubledDown = newState.playerHands?.some(h => h.isDoubledDown) ?? false
     const isLoss = result === 'lose' || result === 'bust'
     const isWin = result === 'win' || result === 'dealerBust' || result === 'blackjack'
 
     // Priority order for resolve-time messages
-    if (result === 'bust' && isDoubledDown) {
+    if (result === 'bust' && anyDoubledDown) {
       return { category: 'doubleDownLoss', context: {} }
     }
     if (result === 'bust') {
@@ -68,7 +69,7 @@ export function determineDealerCategory(prevState, newState, trigger) {
       return { category: 'assetLost', context: { assetName } }
     }
     // Double down loss (non-bust)
-    if (isLoss && isDoubledDown) {
+    if (isLoss && anyDoubledDown) {
       return { category: 'doubleDownLoss', context: {} }
     }
     // First time going broke
@@ -102,13 +103,18 @@ export function determineDealerCategory(prevState, newState, trigger) {
     if (newState.bankroll < 0) {
       return { category: 'playerDebt', context: { debt: newState.bankroll } }
     }
-    if (newState.currentBet > 5000 && newState.bankroll >= 0) {
+    const totalBet = newState.playerHands?.reduce((sum, h) => sum + h.bet, 0) ?? 0
+    if (totalBet > 5000 && newState.bankroll >= 0) {
       return {
         category: 'bigBet',
-        context: { betAmount: newState.currentBet },
+        context: { betAmount: totalBet },
       }
     }
     return null
+  }
+
+  if (trigger === 'split') {
+    return { category: 'playerSplit', context: {} }
   }
 
   if (trigger === 'betAsset') {

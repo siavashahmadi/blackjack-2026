@@ -12,12 +12,12 @@ export function createInitialState() {
     deck: [],
 
     // Hands
-    playerHand: [],
+    playerHands: [],    // Array of hand objects (see createHandObject)
+    activeHandIndex: 0,
     dealerHand: [],
 
     // Money
     bankroll: STARTING_BANKROLL,
-    currentBet: 0,
     chipStack: [],
     selectedChipValue: 100,
 
@@ -33,7 +33,6 @@ export function createInitialState() {
     // Game flow
     phase: 'betting',
     result: null,
-    isDoubledDown: false,
     isAllIn: false,
 
     // Dealer
@@ -62,6 +61,18 @@ export function createInitialState() {
     loanSharkQueue: [],
     muted: false,
     notificationsEnabled: true,
+  }
+}
+
+export function createHandObject(cards = [], bet = 0) {
+  return {
+    cards,
+    bet,
+    isDoubledDown: false,
+    isSplitAces: false,
+    status: 'playing',
+    result: null,
+    payout: 0,
   }
 }
 

@@ -32,6 +32,109 @@
   color: var(--text-primary);
 }
 
+/* ===== Multi-hand layout ===== */
+.handsContainer {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.singleHand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+  position: relative;
+}
+
+.activeHand {
+  filter: drop-shadow(0 0 8px rgba(240, 200, 80, 0.5));
+}
+
+.bustHand {
+  opacity: 0.45;
+}
+
+.handHeader {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.handValue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ddBadge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.handBet {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.assetBadges {
+  display: flex;
+  gap: 1px;
+  font-size: 10px;
+}
+
+.statusBadge {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.status_bust {
+  color: var(--danger);
+}
+
+.status_standing {
+  color: var(--text-dim);
+}
+
+.resultBadge {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.result_win,
+.result_dealerBust,
+.result_blackjack {
+  color: var(--success);
+}
+
+.result_lose,
+.result_bust {
+  color: var(--danger);
+}
+
+.result_push {
+  color: var(--text-dim);
+}
+
 @media (max-width: 374px) {
   .handWrapper {
     min-height: 70px;
@@ -39,5 +142,9 @@
 
   .empty {
     height: 70px;
+  }
+
+  .handsContainer {
+    gap: 6px;
   }
 }

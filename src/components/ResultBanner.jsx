@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { formatMoney } from '../utils/formatters'
 import styles from './ResultBanner.module.css'
 
 const RESULT_CONFIG = {
@@ -8,6 +9,17 @@ const RESULT_CONFIG = {
   bust: { text: 'BUST!', colorClass: 'red' },
   lose: { text: 'YOU LOSE', colorClass: 'red' },
   push: { text: 'PUSH', colorClass: 'dim' },
+  mixed: { text: 'SPLIT RESULT', colorClass: 'dim' },
+}
+
+function getSplitResultText(playerHands) {
+  const wins = playerHands.filter(h =>
+    h.result === 'win' || h.result === 'dealerBust' || h.result === 'blackjack'
+  ).length
+  const total = playerHands.length
+  if (wins === total) return `WON ALL ${total} HANDS`
+  if (wins === 0) return `LOST ALL ${total} HANDS`
+  return `WON ${wins} OF ${total} HANDS`
 }
 
 function getNextHandText(bankroll) {
@@ -18,9 +30,10 @@ function getNextHandText(bankroll) {
   return 'NEXT HAND'
 }
 
-function ResultBanner({ result, bankroll, onNextHand, autoAdvance = false, nextRoundAt }) {
+function ResultBanner({ result, bankroll, onNextHand, playerHands = [], autoAdvance = false, nextRoundAt }) {
   const [countdown, setCountdown] = useState(null)
   const config = RESULT_CONFIG[result]
+  const isSplit = playerHands.length > 1
 
   useEffect(() => {
     if (!autoAdvance || !nextRoundAt) return
@@ -37,11 +50,18 @@ function ResultBanner({ result, bankroll, onNextHand, autoAdvance = false, nextR
 
   if (!config) return null
 
+  const netPayout = playerHands.reduce((sum, h) => sum + (h.payout || 0), 0)
+
   return (
     <div className={styles.banner}>
       <span className={`${styles.resultText} ${styles[config.colorClass]}`}>
-        {config.text}
+        {isSplit && result === 'mixed' ? getSplitResultText(playerHands) : config.text}
       </span>
+      {isSplit && (
+        <span className={`${styles.netPayout} ${netPayout >= 0 ? styles.payoutWin : styles.payoutLoss}`}>
+          {netPayout >= 0 ? '+' : ''}{formatMoney(netPayout)}
+        </span>
+      )}
       {autoAdvance ? (
         <span className={styles.countdownText}>
           Next round in {countdown ?? '...'}s

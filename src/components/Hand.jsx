@@ -9,6 +9,12 @@ function getCardMargin(cardCount, cardIndex, size) {
     if (cardCount === 3) return -4
     return -12
   }
+  if (size === 'medium') {
+    if (cardCount <= 2) return 6
+    if (cardCount === 3) return -2
+    if (cardCount === 4) return -10
+    return -18
+  }
   if (cardCount <= 2) return 10
   if (cardCount === 3) return 0
   if (cardCount === 4) return -15

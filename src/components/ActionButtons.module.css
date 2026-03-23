@@ -28,6 +28,10 @@
   background: linear-gradient(135deg, var(--danger), #c0392b);
 }
 
+.split {
+  background: linear-gradient(135deg, #2d6b8b, #1d4a6a);
+}
+
 .doubleDown {
   background: linear-gradient(135deg, #7b2d8b, #5a1d6a);
 }

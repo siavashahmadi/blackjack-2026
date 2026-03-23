@@ -215,7 +215,57 @@
   color: var(--card-black);
 }
 
-/* ===== Small Size Variant (for other players in multiplayer) ===== */
+/* ===== Medium Size Variant (3 split hands — still shows pips) ===== */
+.medium {
+  width: 60px;
+  height: 87px;
+  border-radius: 8px;
+}
+
+.medium .face {
+  border-radius: 8px;
+  padding: 2px 3px;
+}
+
+.medium .back {
+  border-radius: 8px;
+}
+
+.medium .rank {
+  font-size: 11px;
+}
+
+.medium .suitSmall {
+  font-size: 8px;
+}
+
+.medium .pip,
+.medium .pipFlipped {
+  font-size: 10px;
+}
+
+.medium .centerSuit {
+  font-size: 26px;
+}
+
+.medium .faceCardRank {
+  font-size: 22px;
+}
+
+.medium .faceCardSuit {
+  font-size: 16px;
+}
+
+.medium .faceCardAccent,
+.medium .faceCardAccentBottom {
+  font-size: 8px;
+}
+
+.medium .aceSuit {
+  font-size: 30px;
+}
+
+/* ===== Small Size Variant (for other players in multiplayer / 4 split hands) ===== */
 .small {
   width: 45px;
   height: 65px;

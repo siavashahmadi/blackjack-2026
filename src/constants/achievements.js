@@ -23,6 +23,10 @@ export const ACHIEVEMENTS = [
   { id: 'hands_100', name: 'Addict', description: 'Play 100 hands', emoji: '🎰' },
   { id: 'all_in_win', name: 'YOLO', description: 'Go all-in and win', emoji: '🎲' },
   { id: 'all_in_loss', name: 'Wipeout', description: 'Go all-in and lose', emoji: '💥' },
+  { id: 'first_split', name: 'Seeing Double', description: 'Split a pair for the first time', emoji: '✌️' },
+  { id: 'split_four', name: 'Quad Damage', description: 'Have 4 hands at once', emoji: '4️⃣' },
+  { id: 'split_both_bust', name: 'Double Trouble', description: 'Bust on both split hands', emoji: '💀' },
+  { id: 'split_both_win', name: 'Having It Both Ways', description: 'Win both split hands', emoji: '🎉' },
 ]
 
 export const ACHIEVEMENT_MAP = Object.fromEntries(
