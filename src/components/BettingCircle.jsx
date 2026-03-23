@@ -79,6 +79,8 @@ const BettingCircle = forwardRef(function BettingCircle(
                   <Chip
                     label={chip.label}
                     color={chip.color}
+                    rimColor={chip.rimColor}
+                    spotColor={chip.spotColor}
                     textColor={chip.textColor}
                     size="stack"
                     animate={false}

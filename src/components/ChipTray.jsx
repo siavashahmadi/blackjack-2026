@@ -18,6 +18,8 @@ function ChipTray({ bankroll, selectedChipValue, onChipTap }) {
           key={chip.value}
           label={chip.label}
           color={chip.color}
+          rimColor={chip.rimColor}
+          spotColor={chip.spotColor}
           textColor={chip.textColor}
           size="tray"
           selected={selectedChipValue === chip.value}

@@ -1,8 +1,8 @@
 export const CHIPS = [
-  { value: 25, label: '25', color: '#7ec88b', textColor: '#1a1a2e', unlockThreshold: null },
-  { value: 100, label: '100', color: '#6b6b80', textColor: '#ffffff', unlockThreshold: null },
-  { value: 500, label: '500', color: '#b07dc0', textColor: '#1a1a2e', unlockThreshold: null },
-  { value: 1000, label: '1K', color: '#f0b860', textColor: '#1a1a2e', unlockThreshold: null },
-  { value: 5000, label: '5K', color: '#e07070', textColor: '#1a1a2e', unlockThreshold: null },
-  { value: 25000, label: '25K', color: '#7dd8dc', textColor: '#1a1a2e', unlockThreshold: -5000 },
+  { value: 25,    label: '25',  color: '#5cb868', rimColor: '#3a8a42', spotColor: '#e8e4d8', textColor: '#1a4a20', unlockThreshold: null },
+  { value: 100,   label: '100', color: '#3e3e58', rimColor: '#2a2a3e', spotColor: '#d8d4c8', textColor: '#d0ccc0', unlockThreshold: null },
+  { value: 500,   label: '500', color: '#9b6abf', rimColor: '#6a3a90', spotColor: '#e8e0f0', textColor: '#2a1040', unlockThreshold: null },
+  { value: 1000,  label: '1K',  color: '#e2b455', rimColor: '#c08820', spotColor: '#fdf6e0', textColor: '#4a3010', unlockThreshold: null },
+  { value: 5000,  label: '5K',  color: '#dc6868', rimColor: '#a03030', spotColor: '#f0dcd8', textColor: '#3a0c0c', unlockThreshold: null },
+  { value: 25000, label: '25K', color: '#5cbebe', rimColor: '#2a8a8c', spotColor: '#daf0f0', textColor: '#0e3a3b', unlockThreshold: -5000 },
 ]
