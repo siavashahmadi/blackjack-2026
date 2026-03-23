@@ -24,8 +24,10 @@
 
 .borrowedLabel {
   position: absolute;
-  top: 2px;
-  right: 8px;
+  top: -14px;
+  left: 0;
+  right: 0;
+  text-align: center;
   font-family: 'DM Sans', sans-serif;
   font-size: 9px;
   font-weight: 500;
