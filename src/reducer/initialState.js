@@ -47,6 +47,7 @@ export function createInitialState() {
     totalLost: 0,
     peakBankroll: STARTING_BANKROLL,
     lowestBankroll: STARTING_BANKROLL,
+    bankrollHistory: [],
 
     // Systems
     unlockedAchievements: [],
@@ -56,6 +57,7 @@ export function createInitialState() {
     // UI
     showAssetMenu: false,
     showAchievements: false,
+    showDebtTracker: false,
     achievementQueue: [],
     loanSharkQueue: [],
     muted: false,

@@ -4,7 +4,7 @@ import {
   RESOLVE_HAND, NEW_ROUND, RESET_GAME,
   TOGGLE_ASSET_MENU, TOGGLE_ACHIEVEMENTS,
   DISMISS_ACHIEVEMENT, DISMISS_LOAN_SHARK, UNLOCK_ACHIEVEMENT, LOAD_ACHIEVEMENTS,
-  TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, SET_DEALER_MESSAGE, SET_LOAN_SHARK_MESSAGE,
+  TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, TOGGLE_DEBT_TRACKER, SET_DEALER_MESSAGE, SET_LOAN_SHARK_MESSAGE,
   LOAD_HIGHEST_DEBT,
 } from './actions'
 import { createInitialState } from './initialState'
@@ -108,6 +108,9 @@ export function gameReducer(state, action) {
         phase,
         result,
         isDoubledDown: false,
+        bankrollHistory: state.bankrollHistory.length === 0
+          ? [state.bankroll]
+          : state.bankrollHistory,
       }
     }
 
@@ -242,6 +245,7 @@ export function gameReducer(state, action) {
         totalLost: isLoss ? state.totalLost + Math.abs(delta) : state.totalLost,
         peakBankroll: Math.max(state.peakBankroll, newBankroll),
         lowestBankroll: Math.min(state.lowestBankroll, newBankroll),
+        bankrollHistory: [...state.bankrollHistory, newBankroll],
       }
     }
 
@@ -281,6 +285,10 @@ export function gameReducer(state, action) {
 
     case TOGGLE_ACHIEVEMENTS: {
       return { ...state, showAchievements: !state.showAchievements }
+    }
+
+    case TOGGLE_DEBT_TRACKER: {
+      return { ...state, showDebtTracker: !state.showDebtTracker }
     }
 
     case DISMISS_ACHIEVEMENT: {

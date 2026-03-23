@@ -16,6 +16,7 @@ function Header({
   onReset,
   unlockedCount,
   onToggleAchievements,
+  onToggleDebtTracker,
   muted,
   onToggleMute,
   notificationsEnabled,
@@ -82,7 +83,7 @@ function Header({
           <div className={styles.dropdown}>
             {onBack && (
               <button className={styles.menuItem} onClick={() => { closeMenu(); onBack(); }}>
-                Back to Home
+                Home
               </button>
             )}
             {!isMultiplayer && (
@@ -91,6 +92,11 @@ function Header({
                 {unlockedCount > 0 && (
                   <span className={styles.menuBadge}>{unlockedCount}</span>
                 )}
+              </button>
+            )}
+            {!isMultiplayer && (
+              <button className={styles.menuItem} onClick={() => { closeMenu(); onToggleDebtTracker(); }}>
+                Financial Journey
               </button>
             )}
             {!isMultiplayer && (

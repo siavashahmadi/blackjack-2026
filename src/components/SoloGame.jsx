@@ -8,7 +8,7 @@ import {
   newRound, resetGame,
   UNDO_CHIP, CLEAR_CHIPS, ALL_IN, STAND,
   TOGGLE_ASSET_MENU, DISMISS_LOAN_SHARK, TOGGLE_ACHIEVEMENTS, DISMISS_ACHIEVEMENT,
-  TOGGLE_MUTE, TOGGLE_NOTIFICATIONS,
+  TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, TOGGLE_DEBT_TRACKER,
 } from '../reducer/actions'
 import { useDealerTurn } from '../hooks/useDealerTurn'
 import { useDealerMessage } from '../hooks/useDealerMessage'
@@ -27,6 +27,7 @@ import ResultBanner from './ResultBanner'
 import LoanSharkPopup from './LoanSharkPopup'
 import AchievementToast from './AchievementToast'
 import AchievementPanel from './AchievementPanel'
+import DebtTracker from './DebtTracker'
 import FlyingChip from './FlyingChip'
 import styles from './SoloGame.module.css'
 
@@ -147,6 +148,7 @@ function SoloGame({ onBack }) {
   const handleToggleAssetMenu = useCallback(() => dispatch({ type: TOGGLE_ASSET_MENU }), [])
   const handleDismissLoanShark = useCallback(() => dispatch({ type: DISMISS_LOAN_SHARK }), [])
   const handleToggleAchievements = useCallback(() => dispatch({ type: TOGGLE_ACHIEVEMENTS }), [])
+  const handleToggleDebtTracker = useCallback(() => dispatch({ type: TOGGLE_DEBT_TRACKER }), [])
   const handleDismissAchievement = useCallback(() => dispatch({ type: DISMISS_ACHIEVEMENT }), [])
   const handleToggleMute = useCallback(() => dispatch({ type: TOGGLE_MUTE }), [])
   const handleToggleNotifications = useCallback(() => dispatch({ type: TOGGLE_NOTIFICATIONS }), [])
@@ -177,6 +179,7 @@ function SoloGame({ onBack }) {
         onReset={handleReset}
         unlockedCount={state.unlockedAchievements.length}
         onToggleAchievements={handleToggleAchievements}
+        onToggleDebtTracker={handleToggleDebtTracker}
         muted={state.muted}
         onToggleMute={handleToggleMute}
         notificationsEnabled={state.notificationsEnabled}
@@ -301,6 +304,17 @@ function SoloGame({ onBack }) {
         <AchievementPanel
           unlockedAchievements={state.unlockedAchievements}
           onClose={handleToggleAchievements}
+        />
+      )}
+
+      {state.showDebtTracker && (
+        <DebtTracker
+          bankrollHistory={state.bankrollHistory}
+          peakBankroll={state.peakBankroll}
+          lowestBankroll={state.lowestBankroll}
+          handsPlayed={state.handsPlayed}
+          totalVigPaid={state.totalVigPaid}
+          onClose={handleToggleDebtTracker}
         />
       )}
     </div>

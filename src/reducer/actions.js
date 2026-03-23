@@ -25,6 +25,7 @@ export const TOGGLE_MUTE = 'TOGGLE_MUTE'
 export const LOAD_HIGHEST_DEBT = 'LOAD_HIGHEST_DEBT'
 export const SET_DEALER_MESSAGE = 'SET_DEALER_MESSAGE'
 export const TOGGLE_NOTIFICATIONS = 'TOGGLE_NOTIFICATIONS'
+export const TOGGLE_DEBT_TRACKER = 'TOGGLE_DEBT_TRACKER'
 
 // Action creators for actions with payloads
 export const addChip = (value) => ({ type: ADD_CHIP, value })
