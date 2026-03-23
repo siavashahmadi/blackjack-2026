@@ -21,6 +21,11 @@ export function createInitialState() {
     chipStack: [],
     selectedChipValue: 100,
 
+    // Vig
+    vigAmount: 0,
+    vigRate: 0,
+    totalVigPaid: 0,
+
     // Assets
     ownedAssets,
     bettedAssets: [],

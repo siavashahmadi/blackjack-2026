@@ -11,6 +11,7 @@ import { createInitialState } from './initialState'
 import { CHIPS } from '../constants/chips'
 import { MIN_BET, BLACKJACK_PAYOUT, RESHUFFLE_THRESHOLD } from '../constants/gameConfig'
 import { handValue, isBlackjack } from '../utils/cardUtils'
+import { getVigRate } from '../constants/vigRates'
 
 // Chip values sorted descending for greedy decomposition
 const CHIP_VALUES_DESC = [...CHIPS].map(c => c.value).sort((a, b) => b - a)
@@ -67,6 +68,12 @@ export function gameReducer(state, action) {
       if (!action.cards || action.cards.length !== 4) return state
 
       const currentBet = sumChipStack(state.chipStack)
+
+      // Vig calculation — charge interest on borrowed portion of cash bet
+      const borrowedAmount = Math.max(0, currentBet - Math.max(0, state.bankroll))
+      const vigRate = borrowedAmount > 0 ? getVigRate(state.bankroll) : 0
+      const vigAmount = Math.floor(borrowedAmount * vigRate)
+
       const playerHand = [action.cards[0], action.cards[2]]
       const dealerHand = [action.cards[1], action.cards[3]]
       const deck = state.deck.slice(4)
@@ -94,6 +101,10 @@ export function gameReducer(state, action) {
         playerHand,
         dealerHand,
         currentBet,
+        bankroll: state.bankroll - vigAmount,
+        vigAmount,
+        vigRate,
+        totalVigPaid: state.totalVigPaid + vigAmount,
         phase,
         result,
         isDoubledDown: false,
@@ -255,6 +266,8 @@ export function gameReducer(state, action) {
         isAllIn: false,
         dealerMessage: '',
         showAssetMenu: false,
+        vigAmount: 0,
+        vigRate: 0,
       }
     }
 

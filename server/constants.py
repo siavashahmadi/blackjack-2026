@@ -31,6 +31,26 @@ ASSET_MAP = {a["id"]: a for a in ASSETS}
 
 DEFAULT_OWNED_ASSETS = {a["id"]: True for a in ASSETS}
 
+# Vig (interest) tiers for borrowed bets
+VIG_TIERS = [
+    {"min_bankroll": 0, "rate": 0.02},            # >= $0: 2%
+    {"min_bankroll": -10_000, "rate": 0.04},       # $0 to -$10K: 4%
+    {"min_bankroll": -50_000, "rate": 0.07},       # -$10K to -$50K: 7%
+    {"min_bankroll": -250_000, "rate": 0.10},      # -$50K to -$250K: 10%
+    {"min_bankroll": -500_000, "rate": 0.15},      # -$250K to -$500K: 15%
+    {"min_bankroll": -1_000_000, "rate": 0.20},    # -$500K to -$1M: 20%
+    {"min_bankroll": -5_000_000, "rate": 0.275},   # -$1M to -$5M: 27.5%
+    {"min_bankroll": float("-inf"), "rate": 0.40},  # Below -$5M: 40%
+]
+
+
+def get_vig_rate(bankroll: int) -> float:
+    """Return the vig rate for a given bankroll level."""
+    for tier in VIG_TIERS:
+        if bankroll >= tier["min_bankroll"]:
+            return tier["rate"]
+    return VIG_TIERS[-1]["rate"]
+
 # Quick chat messages — predefined messages players can send in multiplayer
 QUICK_CHAT_MESSAGES = {
     "nice_hand": "Nice hand!",

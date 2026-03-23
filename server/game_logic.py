@@ -24,6 +24,7 @@ from constants import (
     MIN_BET,
     NEW_ROUND_DELAY,
     RESHUFFLE_THRESHOLD,
+    get_vig_rate,
 )
 from game_room import GameRoom, PlayerState, get_active_players, reset_round_state
 
@@ -163,6 +164,19 @@ class GameEngine:
             room.players[pid].status = "playing"
 
         room.dealer_hand = [drawn[num_players], drawn[num_players * 2 + 1]]
+
+        # Calculate and apply vig for each player's borrowed portion
+        for pid in active_pids:
+            player = room.players[pid]
+            borrowed = max(0, player.bet - max(0, player.bankroll))
+            if borrowed > 0:
+                rate = get_vig_rate(player.bankroll)
+                vig = math.floor(borrowed * rate)
+                if vig > 0:
+                    player.bankroll -= vig
+                    player.vig_amount = vig
+                    player.vig_rate = rate
+                    player.total_vig_paid += vig
 
         # Check for blackjacks
         dealer_bj = is_blackjack(room.dealer_hand)
@@ -588,6 +602,8 @@ class GameEngine:
             "connected": player.connected,
             "is_doubled_down": player.is_doubled_down,
             "result": player.result,
+            "vig_amount": player.vig_amount,
+            "vig_rate": player.vig_rate,
             "stats": {
                 "hands_played": player.hands_played,
                 "win_streak": player.win_streak,
@@ -599,6 +615,7 @@ class GameEngine:
                 "total_assets_bet": player.total_assets_bet,
                 "total_assets_lost": player.total_assets_lost,
                 "best_win_streak": player.best_win_streak,
+                "total_vig_paid": player.total_vig_paid,
             },
         }
 

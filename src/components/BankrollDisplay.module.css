@@ -96,6 +96,47 @@
   75% { transform: translateX(-1px); }
 }
 
+.debtLabel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--danger);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  animation: creditPulse 1.5s ease-in-out infinite;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vigIndicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+  letter-spacing: 0.5px;
+  animation: vigFade 2s ease-in-out forwards;
+}
+
+.vigWithDebt {
+  bottom: -26px;
+}
+
+@keyframes vigFade {
+  0% { opacity: 0; transform: translateY(4px); }
+  15% { opacity: 1; transform: translateY(0); }
+  75% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
 @media (max-width: 374px) {
   .amount {
     font-size: 24px;

@@ -31,6 +31,11 @@ class PlayerState:
     is_doubled_down: bool = False
     result: str | None = None  # per-player outcome: blackjack|win|lose|bust|push|dealerBust
 
+    # Vig tracking
+    vig_amount: int = 0
+    vig_rate: float = 0.0
+    total_vig_paid: int = 0
+
     # Stats (per-session)
     hands_played: int = 0
     win_streak: int = 0
@@ -191,6 +196,8 @@ def reset_round_state(player: PlayerState):
     player.status = "betting"
     player.is_doubled_down = False
     player.result = None
+    player.vig_amount = 0
+    player.vig_rate = 0.0
 
 
 def cleanup_empty_rooms(max_age_seconds: int = 300) -> int:

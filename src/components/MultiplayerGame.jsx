@@ -147,6 +147,9 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
       <BankrollDisplay
         bankroll={bankroll}
         currentBetTotal={state.betSubmitted ? (localPlayer.bet || 0) : currentBetTotal}
+        handsPlayed={localPlayer.stats?.hands_played || 0}
+        vigAmount={localPlayer.vig_amount || 0}
+        vigRate={localPlayer.vig_rate || 0}
       />
 
       <div className={styles.tableArea}>

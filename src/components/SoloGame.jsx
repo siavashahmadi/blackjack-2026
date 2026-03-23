@@ -183,7 +183,13 @@ function SoloGame({ onBack }) {
         onToggleNotifications={handleToggleNotifications}
         onBack={onBack}
       />
-      <BankrollDisplay bankroll={state.bankroll} currentBetTotal={currentBetTotal} />
+      <BankrollDisplay
+        bankroll={state.bankroll}
+        currentBetTotal={currentBetTotal}
+        handsPlayed={state.handsPlayed}
+        vigAmount={state.vigAmount}
+        vigRate={state.vigRate}
+      />
 
       <div className={styles.table}>
         <DealerArea

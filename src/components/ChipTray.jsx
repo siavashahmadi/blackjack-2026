@@ -9,8 +9,10 @@ function ChipTray({ bankroll, selectedChipValue, onChipTap }) {
     [bankroll]
   )
 
+  const isBorrowed = bankroll <= 0
+
   return (
-    <div className={styles.tray}>
+    <div className={`${styles.tray} ${isBorrowed ? styles.borrowed : ''}`}>
       {availableChips.map(chip => (
         <Chip
           key={chip.value}
@@ -22,6 +24,7 @@ function ChipTray({ bankroll, selectedChipValue, onChipTap }) {
           onClick={(e) => onChipTap(chip.value, e)}
         />
       ))}
+      {isBorrowed && <span className={styles.borrowedLabel}>BORROWED</span>}
     </div>
   )
 }
