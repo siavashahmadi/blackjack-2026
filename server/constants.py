@@ -29,3 +29,15 @@ ASSETS = [
 ASSET_MAP = {a["id"]: a for a in ASSETS}
 
 DEFAULT_OWNED_ASSETS = {a["id"]: True for a in ASSETS}
+
+# Quick chat messages — predefined messages players can send in multiplayer
+QUICK_CHAT_MESSAGES = {
+    "nice_hand": "Nice hand!",
+    "rip": "RIP",
+    "youre_insane": "You're insane",
+    "all_in_baby": "ALL IN BABY",
+    "ouch": "Ouch...",
+    "lets_go": "LET'S GO!",
+    "one_more": "One more hand...",
+    "gg": "GG",
+}

@@ -40,6 +40,9 @@ class PlayerState:
     total_lost: int = 0
     peak_bankroll: int = STARTING_BANKROLL
     lowest_bankroll: int = STARTING_BANKROLL
+    total_assets_bet: int = 0
+    total_assets_lost: int = 0
+    best_win_streak: int = 0
 
 
 @dataclass

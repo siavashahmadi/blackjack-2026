@@ -26,4 +26,11 @@ export const multiplayerInitialState = {
 
   // Result countdown
   nextRoundAt: null,
+
+  // Quick chat
+  chatMessages: [],
+
+  // Session stats
+  sessionStats: null,
+  showLeaderboard: false,
 }

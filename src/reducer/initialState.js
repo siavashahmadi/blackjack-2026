@@ -55,6 +55,7 @@ export function createInitialState() {
     achievementQueue: [],
     loanSharkQueue: [],
     muted: false,
+    notificationsEnabled: true,
   }
 }
 

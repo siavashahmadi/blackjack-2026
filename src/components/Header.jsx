@@ -18,10 +18,14 @@ function Header({
   onToggleAchievements,
   muted,
   onToggleMute,
+  notificationsEnabled,
+  onToggleNotifications,
   // Multiplayer props
   mode,
   roomCode,
   onLeave,
+  isHost,
+  onViewStats,
 }) {
   const [copied, setCopied] = useState(false)
 
@@ -59,9 +63,19 @@ function Header({
             )}
           </button>
         )}
+        {!isMultiplayer && (
+          <button className={styles.muteButton} onClick={onToggleNotifications}>
+            {notificationsEnabled ? '🔔' : '🔕'}
+          </button>
+        )}
         <button className={styles.muteButton} onClick={onToggleMute}>
           {muted ? '🔇' : '🔊'}
         </button>
+        {isMultiplayer && isHost && (
+          <button className={styles.statsButton} onClick={onViewStats}>
+            STATS
+          </button>
+        )}
         {isMultiplayer ? (
           <button className={styles.resetButton} onClick={onLeave}>
             LEAVE

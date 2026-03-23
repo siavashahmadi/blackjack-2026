@@ -15,6 +15,8 @@ import ActionButtons from './ActionButtons'
 import WaitingIndicator from './WaitingIndicator'
 import ResultBanner from './ResultBanner'
 import FlyingChip from './FlyingChip'
+import QuickChat from './QuickChat'
+import SessionLeaderboard from './SessionLeaderboard'
 import styles from './MultiplayerGame.module.css'
 
 let flyingChipId = 0
@@ -109,6 +111,10 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
     onLeave()
   }, [send, onLeave])
 
+  const handleViewStats = useCallback(() => {
+    send({ type: 'view_stats' })
+  }, [send])
+
   const removeFlyingChip = useCallback((id) => {
     setFlyingChips(prev => prev.filter(c => c.id !== id))
   }, [])
@@ -135,6 +141,8 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
         onLeave={handleLeave}
         muted={false}
         onToggleMute={() => {}}
+        isHost={state.isHost}
+        onViewStats={handleViewStats}
       />
       <BankrollDisplay
         bankroll={bankroll}
@@ -165,6 +173,13 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
           playerStates={state.playerStates}
           playerId={state.playerId}
           currentPlayerId={state.currentPlayerId}
+        />
+
+        <QuickChat
+          chatMessages={state.chatMessages}
+          dispatch={dispatch}
+          send={send}
+          playerId={state.playerId}
         />
       </div>
 
@@ -230,6 +245,13 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
           onDone={() => removeFlyingChip(chip.id)}
         />
       ))}
+
+      {state.showLeaderboard && state.sessionStats && (
+        <SessionLeaderboard
+          stats={state.sessionStats}
+          onDismiss={() => dispatch({ type: 'DISMISS_LEADERBOARD' })}
+        />
+      )}
     </div>
   )
 }

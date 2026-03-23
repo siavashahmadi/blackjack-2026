@@ -6,7 +6,7 @@ import {
   addChip, selectChip, deal, hit, doubleDown, betAsset, removeAsset,
   UNDO_CHIP, CLEAR_CHIPS, ALL_IN, STAND, NEW_ROUND, RESET_GAME,
   TOGGLE_ASSET_MENU, DISMISS_LOAN_SHARK, TOGGLE_ACHIEVEMENTS, DISMISS_ACHIEVEMENT,
-  TOGGLE_MUTE,
+  TOGGLE_MUTE, TOGGLE_NOTIFICATIONS,
 } from '../reducer/actions'
 import { useDealerTurn } from '../hooks/useDealerTurn'
 import { useDealerMessage } from '../hooks/useDealerMessage'
@@ -143,6 +143,7 @@ function SoloGame({ onBack }) {
   const handleToggleAchievements = useCallback(() => dispatch({ type: TOGGLE_ACHIEVEMENTS }), [])
   const handleDismissAchievement = useCallback(() => dispatch({ type: DISMISS_ACHIEVEMENT }), [])
   const handleToggleMute = useCallback(() => dispatch({ type: TOGGLE_MUTE }), [])
+  const handleToggleNotifications = useCallback(() => dispatch({ type: TOGGLE_NOTIFICATIONS }), [])
 
   const removeFlyingChip = useCallback((id) => {
     setFlyingChips(prev => prev.filter(c => c.id !== id))
@@ -172,6 +173,8 @@ function SoloGame({ onBack }) {
         onToggleAchievements={handleToggleAchievements}
         muted={state.muted}
         onToggleMute={handleToggleMute}
+        notificationsEnabled={state.notificationsEnabled}
+        onToggleNotifications={handleToggleNotifications}
         onBack={onBack}
       />
       <BankrollDisplay bankroll={state.bankroll} currentBetTotal={currentBetTotal} />
@@ -266,12 +269,14 @@ function SoloGame({ onBack }) {
         </div>
       )}
 
-      <LoanSharkPopup
-        message={state.loanSharkQueue[0] || null}
-        onDismiss={handleDismissLoanShark}
-      />
+      {state.notificationsEnabled && (
+        <LoanSharkPopup
+          message={state.loanSharkQueue[0] || null}
+          onDismiss={handleDismissLoanShark}
+        />
+      )}
 
-      {state.achievementQueue.length > 0 && (
+      {state.notificationsEnabled && state.achievementQueue.length > 0 && (
         <AchievementToast
           key={state.achievementQueue[0]}
           achievementId={state.achievementQueue[0]}

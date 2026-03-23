@@ -441,8 +441,13 @@ class GameEngine:
             # Update bankroll
             player.bankroll += delta
 
+            # Track asset stats before handling
+            player.total_assets_bet += len(player.betted_assets)
+
             # Handle assets
             is_win_outcome = outcome in ("win", "dealerBust", "blackjack", "push")
+            if not is_win_outcome:
+                player.total_assets_lost += len(player.betted_assets)
             if is_win_outcome:
                 # Return betted assets
                 for asset in player.betted_assets:
@@ -468,6 +473,7 @@ class GameEngine:
 
             player.peak_bankroll = max(player.peak_bankroll, player.bankroll)
             player.lowest_bankroll = min(player.lowest_bankroll, player.bankroll)
+            player.best_win_streak = max(player.best_win_streak, player.win_streak)
 
             player.status = "done"
 
@@ -587,6 +593,9 @@ class GameEngine:
                 "total_lost": player.total_lost,
                 "peak_bankroll": player.peak_bankroll,
                 "lowest_bankroll": player.lowest_bankroll,
+                "total_assets_bet": player.total_assets_bet,
+                "total_assets_lost": player.total_assets_lost,
+                "best_win_streak": player.best_win_streak,
             },
         }
 

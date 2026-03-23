@@ -4,7 +4,7 @@ import {
   RESOLVE_HAND, NEW_ROUND, RESET_GAME,
   TOGGLE_ASSET_MENU, TOGGLE_ACHIEVEMENTS,
   DISMISS_ACHIEVEMENT, DISMISS_LOAN_SHARK, UNLOCK_ACHIEVEMENT, LOAD_ACHIEVEMENTS,
-  TOGGLE_MUTE, SET_DEALER_MESSAGE, SET_LOAN_SHARK_MESSAGE,
+  TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, SET_DEALER_MESSAGE, SET_LOAN_SHARK_MESSAGE,
   LOAD_HIGHEST_DEBT,
 } from './actions'
 import { createInitialState } from './initialState'
@@ -259,7 +259,7 @@ export function gameReducer(state, action) {
     }
 
     case RESET_GAME: {
-      return { ...createInitialState(), muted: state.muted }
+      return { ...createInitialState(), muted: state.muted, notificationsEnabled: state.notificationsEnabled }
     }
 
     case TOGGLE_ASSET_MENU: {
@@ -301,6 +301,10 @@ export function gameReducer(state, action) {
 
     case TOGGLE_MUTE: {
       return { ...state, muted: !state.muted }
+    }
+
+    case TOGGLE_NOTIFICATIONS: {
+      return { ...state, notificationsEnabled: !state.notificationsEnabled }
     }
 
     case LOAD_HIGHEST_DEBT: {

@@ -10,7 +10,9 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from constants import NEW_ROUND_DELAY
+import time
+
+from constants import NEW_ROUND_DELAY, QUICK_CHAT_MESSAGES, STARTING_BANKROLL
 from game_logic import GameEngine
 from game_room import (
     MAX_PLAYERS,
@@ -85,6 +87,10 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 engine = GameEngine()
+
+# Quick chat rate limiting: player_id -> last send timestamp
+chat_cooldowns: dict[str, float] = {}
+CHAT_COOLDOWN_SECONDS = 2.0
 
 
 # --- Background Tasks ---
@@ -565,6 +571,141 @@ async def _run_dealer_and_advance(room: GameRoom, room_code: str):
             await manager.broadcast_to_room(room_code, event)
 
 
+async def handle_quick_chat(player_id: str, message: dict):
+    """Handle quick chat messages with rate limiting."""
+    room_code = manager.player_rooms.get(player_id)
+    if not room_code:
+        await manager.send_to_player(
+            player_id, {"type": "error", "message": "You are not in a room"}
+        )
+        return
+
+    room = get_room(room_code)
+    if not room or player_id not in room.players:
+        return
+
+    message_id = message.get("message_id", "")
+    if message_id not in QUICK_CHAT_MESSAGES:
+        await manager.send_to_player(
+            player_id, {"type": "error", "message": "Invalid chat message"}
+        )
+        return
+
+    # Rate limit: 2s cooldown per player
+    now = time.monotonic()
+    last_sent = chat_cooldowns.get(player_id, 0)
+    if now - last_sent < CHAT_COOLDOWN_SECONDS:
+        await manager.send_to_player(
+            player_id, {"type": "error", "message": "Chat cooldown active"}
+        )
+        return
+    chat_cooldowns[player_id] = now
+
+    player = room.players[player_id]
+    await manager.broadcast_to_room(
+        room_code,
+        {
+            "type": "quick_chat",
+            "player_id": player_id,
+            "player_name": player.name,
+            "message_id": message_id,
+            "message_text": QUICK_CHAT_MESSAGES[message_id],
+        },
+    )
+
+
+async def handle_view_stats(player_id: str):
+    """Compile and broadcast session stats (host-only)."""
+    room_code = manager.player_rooms.get(player_id)
+    if not room_code:
+        await manager.send_to_player(
+            player_id, {"type": "error", "message": "You are not in a room"}
+        )
+        return
+
+    room = get_room(room_code)
+    if not room:
+        return
+
+    if room.host_id != player_id:
+        await manager.send_to_player(
+            player_id, {"type": "error", "message": "Only the host can view stats"}
+        )
+        return
+
+    # Build per-player leaderboard entries
+    leaderboard = []
+    for pid, player in room.players.items():
+        net_change = player.bankroll - STARTING_BANKROLL
+        leaderboard.append({
+            "player_id": pid,
+            "name": player.name,
+            "bankroll": player.bankroll,
+            "net_change": net_change,
+            "hands_played": player.hands_played,
+            "total_won": player.total_won,
+            "total_lost": player.total_lost,
+            "lowest_bankroll": player.lowest_bankroll,
+            "total_assets_bet": player.total_assets_bet,
+            "total_assets_lost": player.total_assets_lost,
+            "best_win_streak": player.best_win_streak,
+        })
+
+    # Sort by net change (best first)
+    leaderboard.sort(key=lambda x: x["net_change"], reverse=True)
+
+    # Compute awards
+    awards = []
+    if leaderboard:
+        biggest_loser = max(leaderboard, key=lambda x: x["total_lost"])
+        if biggest_loser["total_lost"] > 0:
+            awards.append({
+                "title": "Biggest Loser",
+                "emoji": "💸",
+                "winner": biggest_loser["name"],
+                "value": f"${biggest_loser['total_lost']:,} lost",
+            })
+
+        deepest_debt = min(leaderboard, key=lambda x: x["lowest_bankroll"])
+        if deepest_debt["lowest_bankroll"] < STARTING_BANKROLL:
+            awards.append({
+                "title": "Deepest in Debt",
+                "emoji": "🕳️",
+                "winner": deepest_debt["name"],
+                "value": f"${deepest_debt['lowest_bankroll']:,}",
+            })
+
+        asset_gambler = max(leaderboard, key=lambda x: x["total_assets_bet"])
+        if asset_gambler["total_assets_bet"] > 0:
+            awards.append({
+                "title": "Asset Gambler",
+                "emoji": "🎰",
+                "winner": asset_gambler["name"],
+                "value": f"{asset_gambler['total_assets_bet']} assets bet",
+            })
+
+        hot_hand = max(leaderboard, key=lambda x: x["best_win_streak"])
+        if hot_hand["best_win_streak"] > 1:
+            awards.append({
+                "title": "Hot Hand",
+                "emoji": "🔥",
+                "winner": hot_hand["name"],
+                "value": f"{hot_hand['best_win_streak']} wins in a row",
+            })
+
+    await manager.broadcast_to_room(
+        room_code,
+        {
+            "type": "session_stats",
+            "stats": {
+                "leaderboard": leaderboard,
+                "awards": awards,
+            },
+            "round_count": room.round_number,
+        },
+    )
+
+
 async def handle_message(player_id: str, message: dict):
     msg_type = message.get("type")
 
@@ -578,6 +719,10 @@ async def handle_message(player_id: str, message: dict):
         await handle_leave(player_id)
     elif msg_type == "pong":
         pass  # Heartbeat response, no action needed
+    elif msg_type == "quick_chat":
+        await handle_quick_chat(player_id, message)
+    elif msg_type == "view_stats":
+        await handle_view_stats(player_id)
     elif msg_type in ("place_bet", "bet_asset", "hit", "stand", "double_down"):
         await handle_game_action(player_id, message)
     else:

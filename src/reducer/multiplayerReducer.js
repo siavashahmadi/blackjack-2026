@@ -264,6 +264,39 @@ export function multiplayerReducer(state, action) {
     case 'SERVER_ERROR':
       return { ...state, error: action.payload.message }
 
+    // ===== Quick Chat =====
+
+    case 'SERVER_QUICK_CHAT': {
+      const { player_id, player_name, message_id, message_text } = action.payload
+      const chatMsg = {
+        id: `${message_id}_${Date.now()}`,
+        playerId: player_id,
+        playerName: player_name,
+        text: message_text,
+        timestamp: Date.now(),
+      }
+      const chatMessages = [...state.chatMessages, chatMsg].slice(-5)
+      return { ...state, chatMessages }
+    }
+
+    case 'DISMISS_CHAT_MESSAGE':
+      return {
+        ...state,
+        chatMessages: state.chatMessages.filter(m => m.id !== action.id),
+      }
+
+    // ===== Session Stats =====
+
+    case 'SERVER_SESSION_STATS':
+      return {
+        ...state,
+        sessionStats: action.payload.stats,
+        showLeaderboard: true,
+      }
+
+    case 'DISMISS_LEADERBOARD':
+      return { ...state, showLeaderboard: false }
+
     default:
       return state
   }

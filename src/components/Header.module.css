@@ -92,6 +92,21 @@
   transform: scale(0.9);
 }
 
+.statsButton {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold-dim);
+  background: none;
+  padding: 4px 6px;
+  letter-spacing: 1px;
+}
+
+.statsButton:active {
+  transform: scale(0.95);
+  color: var(--gold);
+}
+
 .resetButton {
   font-family: 'DM Sans', sans-serif;
   font-size: 11px;
