@@ -39,11 +39,13 @@ export function useWebSocket(dispatch) {
       // Check for reconnection data
       const savedPlayerId = sessionStorage.getItem('mp_player_id')
       const savedRoomCode = sessionStorage.getItem('mp_room_code')
+      const savedSessionToken = sessionStorage.getItem('mp_session_token')
       if (savedPlayerId && savedRoomCode) {
         ws.send(JSON.stringify({
           type: 'reconnect',
           player_id: savedPlayerId,
           code: savedRoomCode,
+          session_token: savedSessionToken || '',
         }))
       }
     }
@@ -65,18 +67,22 @@ export function useWebSocket(dispatch) {
       if (message.type === 'room_created') {
         if (message.player_id) sessionStorage.setItem('mp_player_id', message.player_id)
         if (message.code) sessionStorage.setItem('mp_room_code', message.code)
+        if (message.session_token) sessionStorage.setItem('mp_session_token', message.session_token)
       }
       if (message.type === 'player_joined' && !sessionStorage.getItem('mp_player_id')) {
         if (message.player_id) sessionStorage.setItem('mp_player_id', message.player_id)
         if (message.code) sessionStorage.setItem('mp_room_code', message.code)
+        if (message.session_token) sessionStorage.setItem('mp_session_token', message.session_token)
       }
       if (message.type === 'reconnected') {
         if (message.player_id) sessionStorage.setItem('mp_player_id', message.player_id)
         if (message.code) sessionStorage.setItem('mp_room_code', message.code)
+        if (message.session_token) sessionStorage.setItem('mp_session_token', message.session_token)
       }
       if (message.type === 'left_room') {
         sessionStorage.removeItem('mp_player_id')
         sessionStorage.removeItem('mp_room_code')
+        sessionStorage.removeItem('mp_session_token')
       }
 
       const actionType = `SERVER_${message.type.toUpperCase()}`
@@ -101,6 +107,7 @@ export function useWebSocket(dispatch) {
         } else {
           sessionStorage.removeItem('mp_player_id')
           sessionStorage.removeItem('mp_room_code')
+          sessionStorage.removeItem('mp_session_token')
         }
       }
     }
@@ -124,6 +131,7 @@ export function useWebSocket(dispatch) {
     reconnectAttempts = 0
     sessionStorage.removeItem('mp_player_id')
     sessionStorage.removeItem('mp_room_code')
+    sessionStorage.removeItem('mp_session_token')
     if (activeWs) {
       activeWs.close()
       activeWs = null

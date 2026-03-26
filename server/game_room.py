@@ -20,6 +20,7 @@ class PlayerState:
     connected: bool = True
     is_host: bool = False
     disconnected_at: datetime | None = None
+    session_token: str = field(default_factory=lambda: secrets.token_urlsafe(32))
 
     # Game state
     bankroll: int = STARTING_BANKROLL
@@ -63,6 +64,7 @@ class GameRoom:
     current_player_idx: int = 0
     turn_order: list = field(default_factory=list)  # ordered player_ids
     round_number: int = 0
+    dealer_turn_task: object | None = field(default=None, repr=False)
 
 
 # Global in-memory registry: room_code -> GameRoom

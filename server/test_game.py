@@ -896,5 +896,279 @@ class TestHandlePlayerDeparture(unittest.TestCase):
         self.assertEqual(room.phase, "betting")
 
 
+# =============================================================================
+# Audit fix tests
+# =============================================================================
+
+
+class TestDoubleDownVig(unittest.TestCase):
+    """Fix #1/#2: vig is charged on double-down with committed-bet-aware bankroll."""
+
+    def test_double_down_vig_when_borrowing(self):
+        """Player with low bankroll doubles — vig charged on borrowed portion."""
+        room = make_room_with_players(1)
+        eng = GameEngine()
+        eng.start_game(room)
+
+        p = room.players["player0"]
+        p.status = "playing"
+        p.hands = [create_hand_dict([make_card("5"), make_card("6")], 100)]
+        p.hands[0]["status"] = "playing"
+        p.active_hand_index = 0
+        p.bankroll = 50  # Only $50, hand bet is $100 (already committed)
+        p.vig_amount = 0
+        p.total_vig_paid = 0
+
+        room.turn_order = ["player0"]
+        room.phase = "playing"
+        room.current_player_idx = 0
+        room.deck = [make_card("3")] + [make_card("2")] * 50
+
+        eng.double_down(room, "player0")
+
+        # Effective bankroll = max(0, 50 - 100) = 0 → full $100 additional borrowed
+        # Vig rate at bankroll $50 = 0.02 → vig = floor(100 * 0.02) = 2
+        self.assertEqual(p.vig_amount, 2)
+        self.assertEqual(p.total_vig_paid, 2)
+        self.assertEqual(p.bankroll, 48)  # 50 - 2
+
+    def test_double_down_no_vig_when_covered(self):
+        """Player with enough bankroll doubles — no vig charged."""
+        room = make_room_with_players(1)
+        eng = GameEngine()
+        eng.start_game(room)
+
+        p = room.players["player0"]
+        p.status = "playing"
+        p.hands = [create_hand_dict([make_card("5"), make_card("6")], 100)]
+        p.hands[0]["status"] = "playing"
+        p.active_hand_index = 0
+        p.bankroll = 10000
+        p.vig_amount = 0
+        p.total_vig_paid = 0
+
+        room.turn_order = ["player0"]
+        room.phase = "playing"
+        room.current_player_idx = 0
+        room.deck = [make_card("3")] + [make_card("2")] * 50
+
+        eng.double_down(room, "player0")
+
+        # Effective bankroll = max(0, 10000 - 100) = 9900, additional bet = 100
+        # Borrowed = max(0, 100 - 9900) = 0 → no vig
+        self.assertEqual(p.vig_amount, 0)
+        self.assertEqual(p.bankroll, 10000)
+
+
+class TestSplitVigCommittedBets(unittest.TestCase):
+    """Fix #2: split vig accounts for committed bets on existing hands."""
+
+    def test_split_vig_accounts_for_committed_bet(self):
+        """When bankroll barely covers hand 1, split bet should be fully borrowed."""
+        room, eng, p = TestSplit._setup_split(TestSplit(), "K", "Q")
+        p.bankroll = 500  # Exactly covers hand 1's $500 bet
+        p.vig_amount = 0
+        p.total_vig_paid = 0
+
+        eng.split(room, "player0")
+
+        # Effective bankroll = max(0, 500 - 500) = 0 → full $500 borrowed
+        # Vig rate at bankroll $500 = 0.02 → vig = floor(500 * 0.02) = 10
+        self.assertEqual(p.vig_amount, 10)
+        self.assertEqual(p.total_vig_paid, 10)
+        self.assertEqual(p.bankroll, 490)  # 500 - 10
+
+    def test_split_no_vig_when_bankroll_covers_both(self):
+        """When bankroll covers both hands, no vig is charged."""
+        room, eng, p = TestSplit._setup_split(TestSplit(), "K", "Q")
+        p.bankroll = 10000
+        p.vig_amount = 0
+        p.total_vig_paid = 0
+
+        eng.split(room, "player0")
+
+        # Effective bankroll = max(0, 10000 - 500) = 9500, split bet = 500
+        # Borrowed = max(0, 500 - 9500) = 0 → no vig
+        self.assertEqual(p.vig_amount, 0)
+        self.assertEqual(p.bankroll, 10000)
+
+
+class TestSplitAutoStandBothHands(unittest.TestCase):
+    """Fix #9: both hands auto-stand on 21 after non-aces split."""
+
+    def test_both_hands_21_auto_stand(self):
+        """Split two 10s, both get A → both auto-stand at 21."""
+        room = make_room_with_players(1)
+        eng = GameEngine()
+        eng.start_game(room)
+
+        p = room.players["player0"]
+        p.status = "playing"
+        p.hands = [create_hand_dict([make_card("K"), make_card("Q")], 500)]
+        p.hands[0]["status"] = "playing"
+        p.active_hand_index = 0
+        p.bankroll = 10000
+
+        room.turn_order = ["player0"]
+        room.phase = "playing"
+        room.current_player_idx = 0
+        # Both split hands get an Ace → 10+A = 21
+        room.deck = [make_card("A"), make_card("A")] + [make_card("2")] * 50
+
+        eng.split(room, "player0")
+
+        self.assertEqual(len(p.hands), 2)
+        self.assertEqual(p.hands[0]["status"], "standing")  # 21
+        self.assertEqual(p.hands[1]["status"], "standing")  # 21
+        self.assertEqual(hand_value(p.hands[0]["cards"]), 21)
+        self.assertEqual(hand_value(p.hands[1]["cards"]), 21)
+
+    def test_hand2_21_auto_stand_hand1_playing(self):
+        """Split two 10s: hand1 gets 5 (playing), hand2 gets A (21, auto-stand)."""
+        room = make_room_with_players(1)
+        eng = GameEngine()
+        eng.start_game(room)
+
+        p = room.players["player0"]
+        p.status = "playing"
+        p.hands = [create_hand_dict([make_card("K"), make_card("Q")], 500)]
+        p.hands[0]["status"] = "playing"
+        p.active_hand_index = 0
+        p.bankroll = 10000
+
+        room.turn_order = ["player0"]
+        room.phase = "playing"
+        room.current_player_idx = 0
+        # Hand1 gets 5 (K+5=15), hand2 gets A (Q+A=21)
+        room.deck = [make_card("5"), make_card("A")] + [make_card("2")] * 50
+
+        eng.split(room, "player0")
+
+        self.assertEqual(p.hands[0]["status"], "playing")   # 15, playable
+        self.assertEqual(p.hands[1]["status"], "standing")   # 21, auto-stood
+        self.assertEqual(p.active_hand_index, 0)  # Still on hand 0
+
+
+class TestHandStatusValidation(unittest.TestCase):
+    """Fix #8: _validate_player_turn checks hand-level status."""
+
+    def test_cannot_act_on_standing_hand(self):
+        """Server rejects action on a hand that's already standing."""
+        room = make_room_with_players(1)
+        eng = GameEngine()
+        eng.start_game(room)
+
+        p = room.players["player0"]
+        p.status = "playing"
+        p.hands = [create_hand_dict([make_card("10"), make_card("9")], 100)]
+        p.hands[0]["status"] = "standing"  # Already standing
+        p.active_hand_index = 0
+
+        room.turn_order = ["player0"]
+        room.phase = "playing"
+        room.current_player_idx = 0
+        room.deck = [make_card("2")] * 50
+
+        with self.assertRaises(ValueError, msg="Hand is not in playing state"):
+            eng.hit(room, "player0")
+
+
+class TestAggregateResultBust(unittest.TestCase):
+    """Fix #5: 'bust' aggregate only when ALL hands bust."""
+
+    def test_bust_and_lose_returns_lose(self):
+        eng = GameEngine()
+        result = eng._determine_aggregate_result(["bust", "lose"])
+        self.assertEqual(result, "lose")
+
+    def test_all_bust_returns_bust(self):
+        eng = GameEngine()
+        result = eng._determine_aggregate_result(["bust", "bust"])
+        self.assertEqual(result, "bust")
+
+    def test_bust_and_win_returns_mixed(self):
+        eng = GameEngine()
+        result = eng._determine_aggregate_result(["bust", "win"])
+        self.assertEqual(result, "mixed")
+
+
+class TestTotalWonLostDelta(unittest.TestCase):
+    """Fix #6: total_won/total_lost use delta-based tracking."""
+
+    def test_mixed_result_tracks_net_win(self):
+        """Mixed split result with net positive delta → total_won updated."""
+        eng = GameEngine()
+        room = make_room_with_players(1)
+        eng.start_game(room)
+
+        p = room.players["player0"]
+        p.hands = [
+            create_hand_dict([make_card("10"), make_card("9")], 500),  # 19, wins vs 18
+            create_hand_dict([make_card("10"), make_card("6")], 200),  # 16, loses vs 18
+        ]
+        p.hands[0]["status"] = "standing"
+        p.hands[1]["status"] = "standing"
+        p.status = "standing"
+        p.bankroll = 10000
+        p.total_won = 0
+        p.total_lost = 0
+
+        room.dealer_hand = [make_card("10"), make_card("8")]  # 18
+        room.turn_order = ["player0"]
+        room.phase = "dealer_turn"
+
+        eng.resolve_all_hands(room)
+
+        # Net delta = +500 - 200 = +300
+        self.assertEqual(p.result, "mixed")
+        self.assertEqual(p.total_won, 300)
+        self.assertEqual(p.total_lost, 0)
+
+    def test_mixed_result_tracks_net_loss(self):
+        """Mixed split result with net negative delta → total_lost updated."""
+        eng = GameEngine()
+        room = make_room_with_players(1)
+        eng.start_game(room)
+
+        p = room.players["player0"]
+        p.hands = [
+            create_hand_dict([make_card("10"), make_card("9")], 200),  # 19, wins vs 18
+            create_hand_dict([make_card("10"), make_card("6")], 500),  # 16, loses vs 18
+        ]
+        p.hands[0]["status"] = "standing"
+        p.hands[1]["status"] = "standing"
+        p.status = "standing"
+        p.bankroll = 10000
+        p.total_won = 0
+        p.total_lost = 0
+
+        room.dealer_hand = [make_card("10"), make_card("8")]  # 18
+        room.turn_order = ["player0"]
+        room.phase = "dealer_turn"
+
+        eng.resolve_all_hands(room)
+
+        # Net delta = +200 - 500 = -300
+        self.assertEqual(p.result, "mixed")
+        self.assertEqual(p.total_won, 0)
+        self.assertEqual(p.total_lost, 300)
+
+
+class TestReconnectSessionToken(unittest.TestCase):
+    """Fix #4: PlayerState has session_token field."""
+
+    def test_player_state_has_session_token(self):
+        """New PlayerState gets a random session token."""
+        p = PlayerState(name="Test", player_id="test-id")
+        self.assertIsInstance(p.session_token, str)
+        self.assertTrue(len(p.session_token) > 20)
+
+    def test_different_players_different_tokens(self):
+        """Two players get different tokens."""
+        p1 = PlayerState(name="P1", player_id="id1")
+        p2 = PlayerState(name="P2", player_id="id2")
+        self.assertNotEqual(p1.session_token, p2.session_token)
+
+
 if __name__ == "__main__":
     unittest.main()

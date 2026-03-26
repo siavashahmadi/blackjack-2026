@@ -75,7 +75,7 @@ function determineAggregateResult(outcomes) {
   if (hasWin && hasLoss) return 'mixed'
   if (hasWin) return outcomes.includes('dealerBust') ? 'dealerBust' : 'win'
   if (outcomes.every(o => o === 'push')) return 'push'
-  if (hasLoss) return outcomes.includes('bust') ? 'bust' : 'lose'
+  if (hasLoss) return outcomes.every(o => o === 'bust') ? 'bust' : 'lose'
   return 'mixed'
 }
 
@@ -239,6 +239,14 @@ export function gameReducer(state, action) {
       if (!hand || hand.cards.length !== 2) return state
       if (hand.isSplitAces) return state
 
+      // Vig on the additional bet (same amount as original hand bet)
+      const additionalBet = hand.bet
+      const totalCommitted = state.playerHands.reduce((sum, h) => sum + h.bet, 0)
+      const effectiveBankroll = Math.max(0, state.bankroll - totalCommitted)
+      const borrowedAmount = Math.max(0, additionalBet - effectiveBankroll)
+      const vigRate = borrowedAmount > 0 ? getVigRate(state.bankroll) : 0
+      const vigAmount = Math.floor(borrowedAmount * vigRate)
+
       const newCards = [...hand.cards, action.card]
       const value = handValue(newCards)
       const isBust = value > 21
@@ -252,7 +260,15 @@ export function gameReducer(state, action) {
       })
 
       const advancement = advanceToNextHand(state.activeHandIndex, playerHands)
-      return { ...state, playerHands, deck: state.deck.slice(1), ...advancement }
+      return {
+        ...state,
+        playerHands,
+        deck: state.deck.slice(1),
+        bankroll: state.bankroll - vigAmount,
+        vigAmount: state.vigAmount + vigAmount,
+        totalVigPaid: state.totalVigPaid + vigAmount,
+        ...advancement,
+      }
     }
 
     case SPLIT: {
@@ -282,7 +298,9 @@ export function gameReducer(state, action) {
       )
 
       // Vig on the new hand's bet (hand2 is the additional bet)
-      const borrowedAmount = Math.max(0, splitHand.bet - Math.max(0, state.bankroll))
+      const totalCommitted = state.playerHands.reduce((sum, h) => sum + h.bet, 0)
+      const effectiveBankroll = Math.max(0, state.bankroll - totalCommitted)
+      const borrowedAmount = Math.max(0, splitHand.bet - effectiveBankroll)
       const vigRate = borrowedAmount > 0 ? getVigRate(state.bankroll) : 0
       const vigAmount = Math.floor(borrowedAmount * vigRate)
 
@@ -295,9 +313,11 @@ export function gameReducer(state, action) {
         hand2.status = handValue(hand2.cards) > 21 ? 'bust' : 'standing'
         hand2.result = handValue(hand2.cards) > 21 ? 'bust' : null
       } else {
-        // Auto-stand if dealt to 21 on hand1
         if (handValue(hand1.cards) === 21) {
           hand1.status = 'standing'
+        }
+        if (handValue(hand2.cards) === 21) {
+          hand2.status = 'standing'
         }
       }
 

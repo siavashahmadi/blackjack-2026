@@ -3,6 +3,9 @@ import { handValue, isSoft } from '../utils/cardUtils'
 import { dealerDraw, resolveHand } from '../reducer/actions'
 import { DEALER_HIT_DELAY, DEALER_STAND_DELAY } from '../constants/gameConfig'
 
+// Note: This function does not check isBlackjack(). Natural blackjacks
+// are resolved at DEAL time before dealer turn. Split-hand 21s correctly
+// receive 'win' (1:1 payout), not 'blackjack' (3:2), per casino rules.
 function determineOutcome(playerCards, dealerHand) {
   const playerVal = handValue(playerCards)
   const dealerVal = handValue(dealerHand)

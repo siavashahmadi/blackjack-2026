@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import secrets
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -189,6 +190,7 @@ async def handle_create_room(player_id: str, message: dict):
             "type": "room_created",
             "code": room.code,
             "player_id": player_id,
+            "session_token": room.players[player_id].session_token,
             "players": get_player_list(room),
         },
     )
@@ -234,13 +236,14 @@ async def handle_join_room(player_id: str, message: dict):
 
     player_list = get_player_list(room)
 
-    # Send to the joining player
+    # Send to the joining player (includes session_token — never broadcast)
     await manager.send_to_player(
         player_id,
         {
             "type": "player_joined",
             "player_name": name,
             "player_id": player_id,
+            "session_token": room.players[player_id].session_token,
             "code": room.code,
             "players": player_list,
         },
@@ -366,7 +369,7 @@ async def handle_leave(player_id: str):
 
         # If departure triggered dealer turn, run it
         if triggered_dealer:
-            asyncio.create_task(_run_dealer_and_advance(remaining_room, room_code))
+            _start_dealer_turn_if_needed(remaining_room, room_code)
 
 
 async def handle_disconnect(player_id: str):
@@ -404,7 +407,7 @@ async def handle_disconnect(player_id: str):
 
     # If departure triggered dealer turn, run it
     if room.phase == "dealer_turn":
-        asyncio.create_task(_run_dealer_and_advance(room, room_code))
+        _start_dealer_turn_if_needed(room, room_code)
 
     # Schedule auto-leave after grace period
     async def auto_leave():
@@ -421,7 +424,7 @@ async def handle_disconnect(player_id: str):
     manager.disconnect_tasks[player_id] = asyncio.create_task(auto_leave())
 
 
-async def handle_reconnect(player_id_from_msg: str, code: str, websocket: WebSocket) -> str | None:
+async def handle_reconnect(player_id_from_msg: str, code: str, session_token: str, websocket: WebSocket) -> str | None:
     """Attempt to restore a disconnected player's session.
 
     Returns the restored player_id on success, None on failure.
@@ -444,6 +447,12 @@ async def handle_reconnect(player_id_from_msg: str, code: str, websocket: WebSoc
     if player.connected:
         await websocket.send_text(
             json.dumps({"type": "error", "message": "Reconnection failed. Player already connected."})
+        )
+        return None
+
+    if not session_token or not secrets.compare_digest(player.session_token, session_token):
+        await websocket.send_text(
+            json.dumps({"type": "error", "message": "Reconnection failed. Invalid session."})
         )
         return None
 
@@ -473,6 +482,7 @@ async def handle_reconnect(player_id_from_msg: str, code: str, websocket: WebSoc
         "type": "reconnected",
         "code": code,
         "player_id": player_id_from_msg,
+        "session_token": player.session_token,
         "players": get_player_list(room),
         "phase": room.phase,
     }
@@ -558,7 +568,14 @@ async def handle_game_action(player_id: str, message: dict):
 
     # If we transitioned to dealer_turn, run the dealer asynchronously
     if room.phase == "dealer_turn":
-        asyncio.create_task(_run_dealer_and_advance(room, room_code))
+        _start_dealer_turn_if_needed(room, room_code)
+
+
+def _start_dealer_turn_if_needed(room: GameRoom, room_code: str):
+    """Start dealer turn task only if one isn't already running."""
+    if room.dealer_turn_task and not room.dealer_turn_task.done():
+        return
+    room.dealer_turn_task = asyncio.create_task(_run_dealer_and_advance(room, room_code))
 
 
 async def _run_dealer_and_advance(room: GameRoom, room_code: str):
@@ -770,6 +787,7 @@ async def websocket_endpoint(websocket: WebSocket):
             restored_id = await handle_reconnect(
                 message.get("player_id", ""),
                 message.get("code", ""),
+                message.get("session_token", ""),
                 websocket,
             )
             if restored_id:

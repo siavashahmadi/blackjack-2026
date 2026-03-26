@@ -356,7 +356,9 @@ class GameEngine:
 
         # Calculate vig on the additional bet (doubling the existing bet)
         additional_bet = hand["bet"]
-        borrowed = max(0, additional_bet - max(0, player.bankroll))
+        total_committed = sum(h["bet"] for h in player.hands)
+        effective_bankroll = max(0, player.bankroll - total_committed)
+        borrowed = max(0, additional_bet - effective_bankroll)
         if borrowed > 0:
             rate = get_vig_rate(player.bankroll)
             vig = math.floor(borrowed * rate)
@@ -421,7 +423,9 @@ class GameEngine:
         original_bet = hand["bet"]
 
         # Calculate vig on the new hand's bet (borrowed portion)
-        borrowed = max(0, original_bet - max(0, player.bankroll))
+        total_committed = sum(h["bet"] for h in player.hands)
+        effective_bankroll = max(0, player.bankroll - total_committed)
+        borrowed = max(0, original_bet - effective_bankroll)
         if borrowed > 0:
             rate = get_vig_rate(player.bankroll)
             vig = math.floor(borrowed * rate)
@@ -456,9 +460,12 @@ class GameEngine:
             if not has_more:
                 events.extend(self._advance_turn(room))
         else:
-            # Check if first hand has 21 — auto-stand
             if hand_value(new_hand1["cards"]) == 21:
                 new_hand1["status"] = "standing"
+            if hand_value(new_hand2["cards"]) == 21:
+                new_hand2["status"] = "standing"
+            # Advance past any auto-stood hands
+            if player.hands[player.active_hand_index]["status"] != "playing":
                 has_more = self._advance_hand(player)
                 if not has_more:
                     events.extend(self._advance_turn(room))
@@ -561,6 +568,9 @@ class GameEngine:
         real-time updates to clients.
         """
         events = []
+
+        if room.phase != "dealer_turn":
+            return events
 
         # Check if all active players busted — dealer doesn't need to draw
         active_pids = [pid for pid in room.turn_order if pid in room.players]
@@ -671,14 +681,15 @@ class GameEngine:
             if is_win:
                 player.win_streak += 1
                 player.lose_streak = 0
-                player.total_won += total_delta
             elif is_loss:
                 player.lose_streak += 1
                 player.win_streak = 0
+
+            # Track money flow based on actual delta, not aggregate label
+            if total_delta > 0:
+                player.total_won += total_delta
+            elif total_delta < 0:
                 player.total_lost += abs(total_delta)
-            else:
-                # Push or mixed — don't reset streaks
-                pass
 
             player.peak_bankroll = max(player.peak_bankroll, player.bankroll)
             player.lowest_bankroll = min(player.lowest_bankroll, player.bankroll)
@@ -856,6 +867,10 @@ class GameEngine:
 
         if player.status != "playing":
             raise ValueError("You cannot act right now")
+
+        hand = player.hands[player.active_hand_index]
+        if hand["status"] != "playing":
+            raise ValueError("Hand is not in playing state")
 
         return player
 
