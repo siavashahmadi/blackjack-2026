@@ -57,9 +57,17 @@ class ConnectionManager:
         self.connections: dict[str, WebSocket] = {}  # player_id -> websocket
         self.player_rooms: dict[str, str] = {}  # player_id -> room_code
         self.disconnect_tasks: dict[str, asyncio.Task] = {}  # player_id -> timeout task
+        self._conn_generation: dict[str, int] = {}  # player_id -> monotonic counter
 
-    async def connect(self, player_id: str, websocket: WebSocket):
+    async def connect(self, player_id: str, websocket: WebSocket) -> int:
+        """Register a connection and return its generation number."""
         self.connections[player_id] = websocket
+        gen = self._conn_generation.get(player_id, 0) + 1
+        self._conn_generation[player_id] = gen
+        return gen
+
+    def get_generation(self, player_id: str) -> int:
+        return self._conn_generation.get(player_id, 0)
 
     def disconnect(self, player_id: str):
         self.connections.pop(player_id, None)
@@ -86,8 +94,8 @@ class ConnectionManager:
             if ws:
                 try:
                     await ws.send_text(msg_text)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Failed to broadcast to player %s: %s", pid, e)
 
     def cancel_disconnect_task(self, player_id: str):
         task = self.disconnect_tasks.pop(player_id, None)
@@ -135,6 +143,15 @@ async def heartbeat_loop():
         for player_id in stale:
             logger.info(f"Heartbeat failed for {player_id}, triggering disconnect")
             await handle_disconnect(player_id)
+
+        # Purge stale chat cooldown entries for disconnected players
+        now = time.monotonic()
+        stale_cooldowns = [
+            pid for pid, ts in chat_cooldowns.items()
+            if pid not in manager.connections and now - ts > CHAT_COOLDOWN_SECONDS
+        ]
+        for pid in stale_cooldowns:
+            del chat_cooldowns[pid]
 
 
 # --- Lifespan ---
@@ -307,22 +324,23 @@ async def handle_start_game(player_id: str):
 
     logger.info(f"Game started in room {room_code} with {connected_count} players")
 
-    # Initialize game engine — transitions to betting phase
-    events = engine.start_game(room)
+    async with room._lock:
+        # Initialize game engine — transitions to betting phase
+        events = engine.start_game(room)
 
-    await manager.broadcast_to_room(
-        room_code,
-        {
-            "type": "game_started",
-            "players": get_player_list(room),
-        },
-    )
+        await manager.broadcast_to_room(
+            room_code,
+            {
+                "type": "game_started",
+                "players": get_player_list(room),
+            },
+        )
 
-    # Broadcast engine events (betting_phase)
-    for event in events:
-        await manager.broadcast_to_room(room_code, event)
+        # Broadcast engine events (betting_phase)
+        for event in events:
+            await manager.broadcast_to_room(room_code, event)
 
-    _start_bet_timer(room_code)
+        _start_bet_timer(room_code)
 
 
 async def handle_leave(player_id: str):
@@ -337,69 +355,77 @@ async def handle_leave(player_id: str):
         manager.player_rooms.pop(player_id, None)
         return
 
-    player_name = room.players[player_id].name if player_id in room.players else "Unknown"
+    async with room._lock:
+        player_name = room.players[player_id].name if player_id in room.players else "Unknown"
 
-    # Handle mid-game departure BEFORE removing player (needs turn order intact)
-    # Mark disconnected so _skip_done_players treats them as gone
-    if player_id in room.players:
-        room.players[player_id].connected = False
-    departure_events = engine.handle_player_departure(room, player_id)
-    triggered_dealer = room.phase == "dealer_turn"
+        # Handle mid-game departure BEFORE removing player (needs turn order intact)
+        # Mark disconnected so _skip_done_players treats them as gone
+        if player_id in room.players:
+            room.players[player_id].connected = False
+        departure_events = engine.handle_player_departure(room, player_id)
+        triggered_dealer = room.phase == "dealer_turn"
 
-    new_host_id = remove_player_from_room(room, player_id)
-    manager.player_rooms.pop(player_id, None)
-    manager.cancel_disconnect_task(player_id)
-    chat_cooldowns.pop(player_id, None)
-    _cancel_turn_timer(player_id)
+        new_host_id = remove_player_from_room(room, player_id)
+        manager.player_rooms.pop(player_id, None)
+        manager.cancel_disconnect_task(player_id)
+        chat_cooldowns.pop(player_id, None)
+        _cancel_turn_timer(player_id)
 
-    logger.info(f"{player_name} ({player_id}) left room {room_code}")
+        logger.info(f"{player_name} ({player_id}) left room {room_code}")
 
-    # Notify the leaving player
-    await manager.send_to_player(player_id, {"type": "left_room"})
+        # Notify the leaving player
+        await manager.send_to_player(player_id, {"type": "left_room"})
 
-    # Broadcast to remaining players (room may have been deleted if empty)
-    remaining_room = get_room(room_code)
-    if remaining_room:
-        new_host_name = None
-        if new_host_id and new_host_id in remaining_room.players:
-            new_host_name = remaining_room.players[new_host_id].name
+        # Broadcast to remaining players (room may have been deleted if empty)
+        remaining_room = get_room(room_code)
+        if remaining_room:
+            new_host_name = None
+            if new_host_id and new_host_id in remaining_room.players:
+                new_host_name = remaining_room.players[new_host_id].name
 
-        await manager.broadcast_to_room(
-            room_code,
-            {
-                "type": "player_left",
-                "player_name": player_name,
-                "players": get_player_list(remaining_room),
-                "new_host": new_host_name,
-            },
-        )
+            await manager.broadcast_to_room(
+                room_code,
+                {
+                    "type": "player_left",
+                    "player_name": player_name,
+                    "players": get_player_list(remaining_room),
+                    "new_host": new_host_name,
+                },
+            )
 
-        # Broadcast departure events (turn advancement, auto-deal, etc.)
-        for event in departure_events:
-            await manager.broadcast_to_room(room_code, event)
+            # Broadcast departure events (turn advancement, auto-deal, etc.)
+            for event in departure_events:
+                await manager.broadcast_to_room(room_code, event)
 
-        # Cancel bet timer if departure triggered dealing
-        if any(e.get("type") == "cards_dealt" for e in departure_events):
+            # Cancel bet timer if departure triggered dealing
+            if any(e.get("type") == "cards_dealt" for e in departure_events):
+                _cancel_bet_timer(room_code)
+
+            # If departure triggered dealer turn, run it
+            if triggered_dealer:
+                _start_dealer_turn_if_needed(remaining_room, room_code)
+        else:
+            # Room was deleted — clean up bet timer
             _cancel_bet_timer(room_code)
 
-        # If departure triggered dealer turn, run it
-        if triggered_dealer:
-            _start_dealer_turn_if_needed(remaining_room, room_code)
-    else:
-        # Room was deleted — clean up bet timer
-        _cancel_bet_timer(room_code)
 
-
-async def handle_disconnect(player_id: str, websocket: WebSocket = None):
+async def handle_disconnect(player_id: str, websocket: WebSocket = None, generation: int = None):
     """Handle unexpected WebSocket disconnection with grace period.
 
     If websocket is provided, skip if the connection was already taken over
     by a newer WebSocket (e.g., reconnection replaced the old one).
+    If generation is provided, skip if a newer connection has since been
+    established (prevents stale disconnect handlers from tearing down
+    reconnected sessions).
     """
     if websocket is not None:
         current_ws = manager.connections.get(player_id)
         if current_ws is not None and current_ws is not websocket:
             logger.debug(f"Skipping disconnect for {player_id} — connection was taken over")
+            return
+    if generation is not None:
+        if manager.get_generation(player_id) != generation:
+            logger.debug(f"Skipping disconnect for {player_id} — generation mismatch")
             return
     manager.disconnect(player_id)
     chat_cooldowns.pop(player_id, None)
@@ -414,35 +440,36 @@ async def handle_disconnect(player_id: str, websocket: WebSocket = None):
         manager.player_rooms.pop(player_id, None)
         return
 
-    player = room.players[player_id]
-    player.connected = False
-    player.disconnected_at = datetime.now(timezone.utc)
+    async with room._lock:
+        player = room.players[player_id]
+        player.connected = False
+        player.disconnected_at = datetime.now(timezone.utc)
 
-    logger.info(f"{player.name} ({player_id}) disconnected from room {room_code}")
+        logger.info(f"{player.name} ({player_id}) disconnected from room {room_code}")
 
-    await manager.broadcast_to_room(
-        room_code,
-        {
-            "type": "player_disconnected",
-            "player_name": player.name,
-            "players": get_player_list(room),
-        },
-    )
+        await manager.broadcast_to_room(
+            room_code,
+            {
+                "type": "player_disconnected",
+                "player_name": player.name,
+                "players": get_player_list(room),
+            },
+        )
 
-    # Handle mid-game departure (advance turn, auto-deal, etc.)
-    departure_events = engine.handle_player_departure(room, player_id)
-    for event in departure_events:
-        await manager.broadcast_to_room(room_code, event)
+        # Handle mid-game departure (advance turn, auto-deal, etc.)
+        departure_events = engine.handle_player_departure(room, player_id)
+        for event in departure_events:
+            await manager.broadcast_to_room(room_code, event)
 
-    # Cancel bet timer if departure triggered dealing
-    if any(e.get("type") == "cards_dealt" for e in departure_events):
-        _cancel_bet_timer(room_code)
+        # Cancel bet timer if departure triggered dealing
+        if any(e.get("type") == "cards_dealt" for e in departure_events):
+            _cancel_bet_timer(room_code)
 
-    # If departure triggered dealer turn, run it
-    if room.phase == "dealer_turn":
-        _start_dealer_turn_if_needed(room, room_code)
+        # If departure triggered dealer turn, run it
+        if room.phase == "dealer_turn":
+            _start_dealer_turn_if_needed(room, room_code)
 
-    # Schedule auto-leave after grace period
+    # Schedule auto-leave after grace period (outside lock — task runs later)
     async def auto_leave():
         await asyncio.sleep(DISCONNECT_GRACE_PERIOD)
         # Check if still disconnected
@@ -470,91 +497,92 @@ async def handle_reconnect(player_id_from_msg: str, code: str, session_token: st
         )
         return None
 
-    if player_id_from_msg not in room.players:
-        await websocket.send_text(
-            json.dumps({"type": "reconnect_failed", "message": "Reconnection failed. Player not found in room."})
-        )
-        return None
-
-    player = room.players[player_id_from_msg]
-    if player.connected:
-        # Connection takeover: the old WS is likely dead (e.g., mobile Safari
-        # killed it on app switch) but the server hasn't detected it yet.
-        old_ws = manager.connections.get(player_id_from_msg)
-        manager.disconnect(player_id_from_msg)
-        manager.cancel_disconnect_task(player_id_from_msg)
-        player.connected = False
-        player.disconnected_at = datetime.now(timezone.utc)
-        if old_ws is not None and old_ws is not websocket:
-            try:
-                await old_ws.close(code=4000, reason="Session taken over by new connection")
-            except Exception:
-                pass
-        logger.info(
-            f"Connection takeover for {player.name} ({player_id_from_msg}) — old WS replaced"
-        )
-
-    if not session_token or not secrets.compare_digest(player.session_token, session_token):
-        await websocket.send_text(
-            json.dumps({"type": "reconnect_failed", "message": "Reconnection failed. Invalid session."})
-        )
-        return None
-
-    if player.disconnected_at is None:
-        await websocket.send_text(
-            json.dumps({"type": "reconnect_failed", "message": "Reconnection failed. Invalid state."})
-        )
-        return None
-
-    elapsed = (datetime.now(timezone.utc) - player.disconnected_at).total_seconds()
-    if elapsed > DISCONNECT_GRACE_PERIOD:
-        await websocket.send_text(
-            json.dumps({"type": "reconnect_failed", "message": "Reconnection failed. Session expired."})
-        )
-        return None
-
-    # Restore the player
-    player.connected = True
-    player.disconnected_at = None
-    manager.connections[player_id_from_msg] = websocket
-    manager.cancel_disconnect_task(player_id_from_msg)
-
-    logger.info(f"{player.name} ({player_id_from_msg}) reconnected to room {code}")
-
-    # Notify the reconnecting player — include full game state if in-game
-    reconnect_msg = {
-        "type": "reconnected",
-        "code": code,
-        "player_id": player_id_from_msg,
-        "session_token": player.session_token,
-        "players": get_player_list(room),
-        "phase": room.phase,
-    }
-    if room.phase not in ("lobby",):
-        reconnect_msg["state"] = engine.get_room_state(room)
-    await websocket.send_text(json.dumps(reconnect_msg))
-
-    # If it's this player's turn, notify them and start turn timer
-    if room.phase == "playing":
-        current_pid = engine._get_current_player_id(room)
-        if current_pid == player_id_from_msg:
+    async with room._lock:
+        if player_id_from_msg not in room.players:
             await websocket.send_text(
-                json.dumps({"type": "your_turn", "player_id": player_id_from_msg})
+                json.dumps({"type": "reconnect_failed", "message": "Reconnection failed. Player not found in room."})
             )
-            _start_turn_timer(player_id_from_msg, code)
+            return None
 
-    # Broadcast to others
-    await manager.broadcast_to_room(
-        code,
-        {
-            "type": "player_reconnected",
-            "player_name": player.name,
+        player = room.players[player_id_from_msg]
+        if player.connected:
+            # Connection takeover: the old WS is likely dead (e.g., mobile Safari
+            # killed it on app switch) but the server hasn't detected it yet.
+            old_ws = manager.connections.get(player_id_from_msg)
+            manager.disconnect(player_id_from_msg)
+            manager.cancel_disconnect_task(player_id_from_msg)
+            player.connected = False
+            player.disconnected_at = datetime.now(timezone.utc)
+            if old_ws is not None and old_ws is not websocket:
+                try:
+                    await old_ws.close(code=4000, reason="Session taken over by new connection")
+                except Exception:
+                    pass
+            logger.info(
+                f"Connection takeover for {player.name} ({player_id_from_msg}) — old WS replaced"
+            )
+
+        if not session_token or not secrets.compare_digest(player.session_token, session_token):
+            await websocket.send_text(
+                json.dumps({"type": "reconnect_failed", "message": "Reconnection failed. Invalid session."})
+            )
+            return None
+
+        if player.disconnected_at is None:
+            await websocket.send_text(
+                json.dumps({"type": "reconnect_failed", "message": "Reconnection failed. Invalid state."})
+            )
+            return None
+
+        elapsed = (datetime.now(timezone.utc) - player.disconnected_at).total_seconds()
+        if elapsed > DISCONNECT_GRACE_PERIOD:
+            await websocket.send_text(
+                json.dumps({"type": "reconnect_failed", "message": "Reconnection failed. Session expired."})
+            )
+            return None
+
+        # Restore the player
+        player.connected = True
+        player.disconnected_at = None
+        await manager.connect(player_id_from_msg, websocket)
+        manager.cancel_disconnect_task(player_id_from_msg)
+
+        logger.info(f"{player.name} ({player_id_from_msg}) reconnected to room {code}")
+
+        # Notify the reconnecting player — include full game state if in-game
+        reconnect_msg = {
+            "type": "reconnected",
+            "code": code,
+            "player_id": player_id_from_msg,
+            "session_token": player.session_token,
             "players": get_player_list(room),
-        },
-        exclude=player_id_from_msg,
-    )
+            "phase": room.phase,
+        }
+        if room.phase not in ("lobby",):
+            reconnect_msg["state"] = engine.get_room_state(room)
+        await websocket.send_text(json.dumps(reconnect_msg))
 
-    return player_id_from_msg
+        # If it's this player's turn, notify them and start turn timer
+        if room.phase == "playing":
+            current_pid = engine._get_current_player_id(room)
+            if current_pid == player_id_from_msg:
+                await websocket.send_text(
+                    json.dumps({"type": "your_turn", "player_id": player_id_from_msg})
+                )
+                _start_turn_timer(player_id_from_msg, code)
+
+        # Broadcast to others
+        await manager.broadcast_to_room(
+            code,
+            {
+                "type": "player_reconnected",
+                "player_name": player.name,
+                "players": get_player_list(room),
+            },
+            exclude=player_id_from_msg,
+        )
+
+        return player_id_from_msg
 
 
 # --- Turn Timer ---
@@ -574,31 +602,34 @@ def _start_turn_timer(player_id: str, room_code: str):
     async def _auto_stand():
         await asyncio.sleep(TURN_TIMEOUT)
         room = get_room(room_code)
-        if not room or room.phase != "playing":
+        if not room:
             return
-        if player_id not in room.players:
-            return
-        # Verify it is still this player's turn
-        current_pid = None
-        for pid in room.turn_order:
-            if pid in room.players and room.players[pid].status == "playing":
-                current_pid = pid
-                break
-        if current_pid != player_id:
-            return
-        logger.info(f"Turn timer expired for {player_id} in room {room_code}, auto-standing")
-        try:
-            events = engine.stand(room, player_id)
-            for event in events:
-                await manager.broadcast_to_room(room_code, event)
-            # Check if a new your_turn was emitted and start timer for next player
-            for event in events:
-                if event.get("type") == "your_turn":
-                    _start_turn_timer(event["player_id"], room_code)
-            if room.phase == "dealer_turn":
-                _start_dealer_turn_if_needed(room, room_code)
-        except ValueError:
-            pass  # Player already stood or game state changed
+        async with room._lock:
+            if room.phase != "playing":
+                return
+            if player_id not in room.players:
+                return
+            # Verify it is still this player's turn
+            current_pid = None
+            for pid in room.turn_order:
+                if pid in room.players and room.players[pid].status == "playing":
+                    current_pid = pid
+                    break
+            if current_pid != player_id:
+                return
+            logger.info(f"Turn timer expired for {player_id} in room {room_code}, auto-standing")
+            try:
+                events = engine.stand(room, player_id)
+                for event in events:
+                    await manager.broadcast_to_room(room_code, event)
+                # Check if a new your_turn was emitted and start timer for next player
+                for event in events:
+                    if event.get("type") == "your_turn":
+                        _start_turn_timer(event["player_id"], room_code)
+                if room.phase == "dealer_turn":
+                    _start_dealer_turn_if_needed(room, room_code)
+            except ValueError:
+                pass  # Player already stood or game state changed
 
     turn_timers[player_id] = asyncio.create_task(_auto_stand())
 
@@ -617,45 +648,48 @@ def _start_bet_timer(room_code: str):
     async def _auto_skip_afk():
         await asyncio.sleep(BET_TIMEOUT)
         room = get_room(room_code)
-        if not room or room.phase != "betting":
+        if not room:
             return
+        async with room._lock:
+            if room.phase != "betting":
+                return
 
-        # Mark AFK players as sitting out
-        afk_names = []
-        for player in room.players.values():
-            if player.connected and player.status == "betting":
-                player.status = "sitting_out"
-                afk_names.append(player.name)
+            # Mark AFK players as sitting out
+            afk_names = []
+            for player in room.players.values():
+                if player.connected and player.status == "betting":
+                    player.status = "sitting_out"
+                    afk_names.append(player.name)
 
-        if not afk_names:
-            return  # Everyone bet just in time
+            if not afk_names:
+                return  # Everyone bet just in time
 
-        logger.info(f"Bet timer expired in room {room_code}, sitting out: {afk_names}")
+            logger.info(f"Bet timer expired in room {room_code}, sitting out: {afk_names}")
 
-        # Broadcast timeout notification
-        await manager.broadcast_to_room(room_code, {
-            "type": "bet_timeout",
-            "sat_out": afk_names,
-            "state": engine.get_room_state(room),
-        })
+            # Broadcast timeout notification
+            await manager.broadcast_to_room(room_code, {
+                "type": "bet_timeout",
+                "sat_out": afk_names,
+                "state": engine.get_room_state(room),
+            })
 
-        # Deal to ready players (or restart if nobody bet)
-        ready = [p for p in room.players.values() if p.connected and p.status == "ready"]
-        if ready:
-            events = engine.deal_initial_cards(room)
-            for event in events:
-                await manager.broadcast_to_room(room_code, event)
-            for event in events:
-                if event.get("type") == "your_turn":
-                    _start_turn_timer(event["player_id"], room_code)
-            if room.phase == "dealer_turn":
-                _start_dealer_turn_if_needed(room, room_code)
-        else:
-            # Nobody bet — restart betting phase
-            events = engine.start_betting_phase(room)
-            for event in events:
-                await manager.broadcast_to_room(room_code, event)
-            _start_bet_timer(room_code)
+            # Deal to ready players (or restart if nobody bet)
+            ready = [p for p in room.players.values() if p.connected and p.status == "ready"]
+            if ready:
+                events = engine.deal_initial_cards(room)
+                for event in events:
+                    await manager.broadcast_to_room(room_code, event)
+                for event in events:
+                    if event.get("type") == "your_turn":
+                        _start_turn_timer(event["player_id"], room_code)
+                if room.phase == "dealer_turn":
+                    _start_dealer_turn_if_needed(room, room_code)
+            else:
+                # Nobody bet — restart betting phase
+                events = engine.start_betting_phase(room)
+                for event in events:
+                    await manager.broadcast_to_room(room_code, event)
+                _start_bet_timer(room_code)
 
     bet_timers[room_code] = asyncio.create_task(_auto_skip_afk())
 
@@ -679,56 +713,57 @@ async def handle_game_action(player_id: str, message: dict):
         )
         return
 
-    msg_type = message.get("type")
+    async with room._lock:
+        msg_type = message.get("type")
 
-    # Cancel turn timer when a player acts
-    _cancel_turn_timer(player_id)
+        # Cancel turn timer when a player acts
+        _cancel_turn_timer(player_id)
 
-    try:
-        if msg_type == "place_bet":
-            amount = message.get("amount")
-            if not isinstance(amount, int):
-                raise ValueError("Bet amount must be an integer")
-            events = engine.place_bet(room, player_id, amount)
-        elif msg_type == "bet_asset":
-            asset_id = message.get("asset_id", "")
-            events = engine.bet_asset(room, player_id, asset_id)
-        elif msg_type == "hit":
-            events = engine.hit(room, player_id)
-        elif msg_type == "stand":
-            events = engine.stand(room, player_id)
-        elif msg_type == "double_down":
-            events = engine.double_down(room, player_id)
-        elif msg_type == "split":
-            events = engine.split(room, player_id)
-        else:
+        try:
+            if msg_type == "place_bet":
+                amount = message.get("amount")
+                if not isinstance(amount, int):
+                    raise ValueError("Bet amount must be an integer")
+                events = engine.place_bet(room, player_id, amount)
+            elif msg_type == "bet_asset":
+                asset_id = message.get("asset_id", "")
+                events = engine.bet_asset(room, player_id, asset_id)
+            elif msg_type == "hit":
+                events = engine.hit(room, player_id)
+            elif msg_type == "stand":
+                events = engine.stand(room, player_id)
+            elif msg_type == "double_down":
+                events = engine.double_down(room, player_id)
+            elif msg_type == "split":
+                events = engine.split(room, player_id)
+            else:
+                await manager.send_to_player(
+                    player_id,
+                    {"type": "error", "message": f"Unknown game action: {msg_type}"},
+                )
+                return
+        except ValueError as e:
             await manager.send_to_player(
-                player_id,
-                {"type": "error", "message": f"Unknown game action: {msg_type}"},
+                player_id, {"type": "error", "message": str(e)}
             )
             return
-    except ValueError as e:
-        await manager.send_to_player(
-            player_id, {"type": "error", "message": str(e)}
-        )
-        return
 
-    # Broadcast all events to the room
-    for event in events:
-        await manager.broadcast_to_room(room_code, event)
+        # Broadcast all events to the room
+        for event in events:
+            await manager.broadcast_to_room(room_code, event)
 
-    # Cancel bet timer if cards were dealt (all bets placed naturally)
-    if any(e.get("type") == "cards_dealt" for e in events):
-        _cancel_bet_timer(room_code)
+        # Cancel bet timer if cards were dealt (all bets placed naturally)
+        if any(e.get("type") == "cards_dealt" for e in events):
+            _cancel_bet_timer(room_code)
 
-    # Start turn timer for the next player if a your_turn event was emitted
-    for event in events:
-        if event.get("type") == "your_turn":
-            _start_turn_timer(event["player_id"], room_code)
+        # Start turn timer for the next player if a your_turn event was emitted
+        for event in events:
+            if event.get("type") == "your_turn":
+                _start_turn_timer(event["player_id"], room_code)
 
-    # If we transitioned to dealer_turn, run the dealer asynchronously
-    if room.phase == "dealer_turn":
-        _start_dealer_turn_if_needed(room, room_code)
+        # If we transitioned to dealer_turn, run the dealer asynchronously
+        if room.phase == "dealer_turn":
+            _start_dealer_turn_if_needed(room, room_code)
 
 
 def _start_dealer_turn_if_needed(room: GameRoom, room_code: str):
@@ -740,22 +775,27 @@ def _start_dealer_turn_if_needed(room: GameRoom, room_code: str):
 
 async def _run_dealer_and_advance(room: GameRoom, room_code: str):
     """Run dealer turn with broadcasting, then auto-advance to next round."""
+    try:
+        # Phase 1: Run dealer turn (lock for state mutations + broadcasts)
+        async with room._lock:
+            async def broadcast_fn(event: dict):
+                await manager.broadcast_to_room(room_code, event)
 
-    async def broadcast_fn(event: dict):
-        await manager.broadcast_to_room(room_code, event)
+            await engine.run_dealer_turn(room, broadcast_fn)
 
-    await engine.run_dealer_turn(room, broadcast_fn)
+        # Phase 2: Wait for result display (NO lock — players can interact)
+        await asyncio.sleep(NEW_ROUND_DELAY)
 
-    # Auto-advance to next betting phase after delay
-    await asyncio.sleep(NEW_ROUND_DELAY)
-
-    # Verify room still exists and is in result phase
-    r = get_room(room_code)
-    if r and r.phase == "result":
-        events = engine.start_betting_phase(r)
-        for event in events:
-            await manager.broadcast_to_room(room_code, event)
-        _start_bet_timer(room_code)
+        # Phase 3: Advance to next round (re-acquire lock for state transition)
+        async with room._lock:
+            r = get_room(room_code)
+            if r and r.phase == "result":
+                events = engine.start_betting_phase(r)
+                for event in events:
+                    await manager.broadcast_to_room(room_code, event)
+                _start_bet_timer(room_code)
+    finally:
+        room.dealer_turn_task = None
 
 
 async def handle_quick_chat(player_id: str, message: dict):
@@ -932,6 +972,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     await websocket.accept()
     player_id = None
+    conn_gen = None  # connection generation for stale-disconnect detection
 
     try:
         # First message determines if this is a new connection or reconnection
@@ -953,13 +994,14 @@ async def websocket_endpoint(websocket: WebSocket):
             )
             if restored_id:
                 player_id = restored_id
+                conn_gen = manager.get_generation(player_id)
             else:
                 # Reconnect failed — assign new ID, let them create/join fresh
                 player_id = str(uuid.uuid4())
-                await manager.connect(player_id, websocket)
+                conn_gen = await manager.connect(player_id, websocket)
         else:
             player_id = str(uuid.uuid4())
-            await manager.connect(player_id, websocket)
+            conn_gen = await manager.connect(player_id, websocket)
             await handle_message(player_id, message)
 
         # Main message loop
@@ -981,7 +1023,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         if player_id:
-            await handle_disconnect(player_id, websocket)
+            await handle_disconnect(player_id, websocket, generation=conn_gen)
     except json.JSONDecodeError:
         # First message was invalid JSON
         try:
@@ -993,4 +1035,4 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket error for {player_id}: {e}")
         if player_id:
-            await handle_disconnect(player_id, websocket)
+            await handle_disconnect(player_id, websocket, generation=conn_gen)

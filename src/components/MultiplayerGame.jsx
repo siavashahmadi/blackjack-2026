@@ -104,14 +104,21 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
 
   // In-flight guard — prevents rapid double-sends, clears reactively on server response
   const actionPendingRef = useRef(false)
+  const actionTimeoutRef = useRef(null)
   const guardedSend = useCallback((msg) => {
     if (actionPendingRef.current) return
     actionPendingRef.current = true
+    // Safety timeout — auto-reset if server doesn't respond with state change
+    clearTimeout(actionTimeoutRef.current)
+    actionTimeoutRef.current = setTimeout(() => {
+      actionPendingRef.current = false
+    }, 5000)
     send(msg)
   }, [send])
 
   useEffect(() => {
     actionPendingRef.current = false
+    clearTimeout(actionTimeoutRef.current)
   }, [state.playerStates, state.phase, state.currentPlayerId])
 
   // Game actions — send to server

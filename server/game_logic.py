@@ -143,9 +143,15 @@ class GameEngine:
         if any(a["id"] == asset_id for a in player.betted_assets):
             raise ValueError("Asset already bet")
 
-        # Check unlock threshold
+        # Assets unlock when bankroll drops TO or BELOW the threshold
+        # (desperation betting). Thresholds are negative, e.g. car unlocks
+        # at -$2,000. If bankroll is ABOVE the threshold, the player isn't
+        # desperate enough yet.
         if player.bankroll > asset["unlock_threshold"]:
-            raise ValueError("Asset not available at your current bankroll")
+            raise ValueError(
+                f"'{asset['name']}' unlocks when your bankroll drops to "
+                f"${asset['unlock_threshold']:,} or below"
+            )
 
         player.owned_assets[asset_id] = False
         player.betted_assets.append(dict(asset))
@@ -199,7 +205,7 @@ class GameEngine:
                 vig = math.floor(borrowed * rate)
                 if vig > 0:
                     player.bankroll -= vig
-                    player.vig_amount = vig
+                    player.vig_amount += vig
                     player.vig_rate = rate
                     player.total_vig_paid += vig
 
@@ -521,7 +527,23 @@ class GameEngine:
             if current_pid == player_id:
                 # It was this player's turn — advance to next player
                 return self._advance_turn(room)
-            # Not their turn — _skip_done_players will skip them naturally
+            # Not their turn — remove from turn_order to avoid dead entries
+            if player_id in room.turn_order:
+                departed_idx = room.turn_order.index(player_id)
+                room.turn_order.remove(player_id)
+                if departed_idx < room.current_player_idx:
+                    room.current_player_idx -= 1
+            # If nobody left to play, go straight to dealer
+            if not room.turn_order or room.current_player_idx >= len(room.turn_order):
+                room.phase = "dealer_turn"
+                return [
+                    {
+                        "type": "dealer_turn_start",
+                        "dealer_hand": room.dealer_hand,
+                        "dealer_value": hand_value(room.dealer_hand),
+                        "state": self.get_room_state(room, hide_dealer_hole=False),
+                    }
+                ]
             return []
 
         if room.phase == "betting":

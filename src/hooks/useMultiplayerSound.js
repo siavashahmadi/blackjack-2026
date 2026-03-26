@@ -32,8 +32,19 @@ export function useMultiplayerSound(state) {
 
     // Cards dealt — transition from betting to playing
     if (prev.phase === 'betting' && state.phase === 'playing') {
-      const playerCount = Object.keys(state.playerStates).length
-      const totalCards = (playerCount + 1) * 2  // players + dealer
+      // Count actual cards from state instead of estimating
+      let totalCards = (state.dealerHand?.length || 0)
+      for (const player of Object.values(state.playerStates)) {
+        if (player.hands) {
+          for (const hand of player.hands) {
+            totalCards += hand.cards?.length || 0
+          }
+        }
+      }
+      // Fallback minimum to avoid zero sounds
+      if (totalCards === 0) {
+        totalCards = (Object.keys(state.playerStates).length + 1) * 2
+      }
       for (let i = 0; i < totalCards; i++) {
         setTimeout(() => audioManager.play('card_deal'), i * 120)
       }

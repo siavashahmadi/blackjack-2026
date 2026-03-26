@@ -1,5 +1,6 @@
 """Game room and player state management for multiplayer blackjack."""
 
+import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import secrets
@@ -65,6 +66,7 @@ class GameRoom:
     turn_order: list = field(default_factory=list)  # ordered player_ids
     round_number: int = 0
     dealer_turn_task: object | None = field(default=None, repr=False)
+    _lock: object = field(default_factory=asyncio.Lock, repr=False)
 
 
 # Global in-memory registry: room_code -> GameRoom

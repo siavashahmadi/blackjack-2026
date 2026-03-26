@@ -16,6 +16,8 @@ let activeWs = null
 let reconnectAttempts = 0
 let reconnectTimer = null
 let heartbeatTimeout = null
+let pendingMessages = []
+const MAX_PENDING_MESSAGES = 10
 
 function resetHeartbeatTimeout() {
   clearTimeout(heartbeatTimeout)
@@ -63,7 +65,8 @@ export function useWebSocket(dispatch) {
       let message
       try {
         message = JSON.parse(event.data)
-      } catch {
+      } catch (e) {
+        console.warn('[WS] Failed to parse message:', e)
         return
       }
 
@@ -93,11 +96,27 @@ export function useWebSocket(dispatch) {
         sessionStorage.removeItem('mp_player_id')
         sessionStorage.removeItem('mp_room_code')
         sessionStorage.removeItem('mp_session_token')
+        pendingMessages = []
       }
 
       // Reset reconnect counter only on confirmed room success
       if (message.type === 'room_created' || message.type === 'player_joined' || message.type === 'reconnected') {
         reconnectAttempts = 0
+        // Flush any messages queued while disconnected
+        if (pendingMessages.length > 0) {
+          const toSend = [...pendingMessages]
+          pendingMessages = []
+          for (const msg of toSend) {
+            if (activeWs?.readyState === WebSocket.OPEN) {
+              activeWs.send(JSON.stringify(msg))
+            }
+          }
+        }
+      }
+
+      if (!message.type || typeof message.type !== 'string') {
+        console.warn('[WS] Received message without valid type:', message)
+        return
       }
 
       const actionType = `SERVER_${message.type.toUpperCase()}`
@@ -117,7 +136,8 @@ export function useWebSocket(dispatch) {
         }
 
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-          const delay = RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttempts)
+          const baseDelay = RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttempts)
+          const delay = baseDelay * (0.5 + Math.random())
           reconnectAttempts++
           reconnectTimer = setTimeout(() => connect(), delay)
         } else {
@@ -137,7 +157,11 @@ export function useWebSocket(dispatch) {
 
   const send = useCallback((message) => {
     if (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
-      console.warn('[WS] Cannot send — not connected')
+      if (pendingMessages.length >= MAX_PENDING_MESSAGES) {
+        pendingMessages.shift() // drop oldest — newest reflects latest intent
+      }
+      pendingMessages.push(message)
+      console.warn('[WS] Queued message — not connected')
       return
     }
     activeWs.send(JSON.stringify(message))
@@ -148,6 +172,7 @@ export function useWebSocket(dispatch) {
     clearTimeout(reconnectTimer)
     clearTimeout(heartbeatTimeout)
     reconnectAttempts = 0
+    pendingMessages = []
     sessionStorage.removeItem('mp_player_id')
     sessionStorage.removeItem('mp_room_code')
     sessionStorage.removeItem('mp_session_token')
