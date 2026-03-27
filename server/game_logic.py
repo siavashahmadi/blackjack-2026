@@ -6,6 +6,7 @@ Each method returns a list of event dicts for the WebSocket layer to broadcast.
 
 import asyncio
 import math
+import random
 
 from card_engine import (
     card_value,
@@ -20,6 +21,7 @@ from constants import (
     ASSET_MAP,
     BLACKJACK_PAYOUT,
     DEALER_HIT_DELAY,
+    DEALER_LINES,
     DEALER_STAND_DELAY,
     MAX_BET,
     MIN_BET,
@@ -30,6 +32,142 @@ from constants import (
 from game_room import GameRoom, PlayerState, get_active_players, reset_round_state
 
 MAX_SPLIT_HANDS = 4
+
+
+# --- Dealer Trash Talk ---
+
+
+def _select_dealer_message(category: str, shown_lines: dict, context: dict | None = None) -> tuple[str, dict]:
+    """Pick a dealer line from category, avoiding repeats until all shown."""
+    lines = DEALER_LINES.get(category, [])
+    if not lines:
+        return "", shown_lines
+
+    shown = shown_lines.get(category, [])
+    if len(shown) >= len(lines):
+        available = list(range(len(lines)))
+        shown = []
+    else:
+        available = [i for i in range(len(lines)) if i not in shown]
+
+    idx = random.choice(available)
+    shown = [*shown, idx]
+
+    line = lines[idx]
+    if context:
+        try:
+            line = line.format(**context)
+        except (KeyError, IndexError, ValueError):
+            pass  # fallback to raw string if context keys missing
+
+    return line, {**shown_lines, category: shown}
+
+
+def _determine_dealer_category(
+    player: "PlayerState", trigger: str, prev_bankroll: int | None = None
+) -> tuple[str | None, dict]:
+    """Determine which dealer line category to use based on game event."""
+    if trigger == "resolve":
+        result = player.result
+        any_doubled = any(h.get("is_doubled_down") for h in player.hands)
+        is_loss = result in ("lose", "bust")
+        is_win = result in ("win", "dealerBust", "blackjack")
+
+        if result == "bust" and any_doubled:
+            return "doubleDownLoss", {}
+        if result == "bust":
+            return "playerBust", {}
+        if result == "blackjack":
+            return "playerBlackjack", {}
+        if is_loss and player.betted_assets:
+            return "assetLost", {"asset_name": player.betted_assets[0]["name"]}
+        if is_loss and any_doubled:
+            return "doubleDownLoss", {}
+        if is_loss and player.bankroll <= 0 and (prev_bankroll or 0) > 0:
+            return "playerBroke", {}
+        if is_loss and player.bankroll < -100_000:
+            return "deepDebt", {"abs_debt": abs(player.bankroll)}
+        if is_win and player.win_streak >= 3:
+            return "winStreak", {"win_streak": player.win_streak}
+        if is_loss and player.lose_streak >= 3:
+            return "loseStreak", {"lose_streak": player.lose_streak}
+        if is_win:
+            return "playerWin", {}
+        if is_loss:
+            return "playerLose", {}
+        return None, {}
+
+    if trigger == "deal":
+        if player.bankroll < 0:
+            return "playerDebt", {}
+        total_bet = sum(h["bet"] for h in player.hands) if player.hands else player.bet
+        if total_bet > 5000 and player.bankroll >= 0:
+            return "bigBet", {"bet_amount": total_bet}
+        return None, {}
+
+    if trigger == "split":
+        return "playerSplit", {}
+
+    if trigger == "betAsset":
+        if player.betted_assets:
+            return "assetBet", {"asset_name": player.betted_assets[-1]["name"]}
+        return None, {}
+
+    if trigger == "debtActivated":
+        return "debtActivated", {}
+
+    return None, {}
+
+
+def _pick_commentary_target(
+    room: "GameRoom", trigger: str, prev_bankrolls: dict | None = None
+) -> tuple["PlayerState | None", int | None]:
+    """Select the most interesting player for dealer to comment on.
+
+    Returns (player, prev_bankroll) or (None, None).
+    Priority: bust+doubled > bust > blackjack > asset loss > first broke > deep debt
+              > streaks > generic win/loss.
+    """
+    active_pids = [pid for pid in room.turn_order if pid in room.players]
+    if not active_pids:
+        return None, None
+
+    # Score each player by how interesting their result is
+    best_player = None
+    best_score = -1
+    best_prev = None
+
+    for pid in active_pids:
+        player = room.players[pid]
+        prev = (prev_bankrolls or {}).get(pid, 0)
+        score = 0
+        result = player.result
+
+        if result == "bust" and any(h.get("is_doubled_down") for h in player.hands):
+            score = 10
+        elif result == "bust":
+            score = 9
+        elif result == "blackjack":
+            score = 8
+        elif result in ("lose", "bust") and player.betted_assets:
+            score = 7
+        elif result in ("lose", "bust") and player.bankroll <= 0 and prev > 0:
+            score = 6
+        elif result in ("lose", "bust") and player.bankroll < -100_000:
+            score = 5
+        elif player.win_streak >= 3 or player.lose_streak >= 3:
+            score = 4
+        elif result in ("win", "dealerBust"):
+            score = 2
+        elif result in ("lose", "bust"):
+            score = 1
+
+        if score > best_score:
+            best_score = score
+            best_player = player
+            best_prev = prev
+
+    return best_player, best_prev
 
 
 def create_hand_dict(cards=None, bet=0):
@@ -166,6 +304,14 @@ class GameEngine:
         player.owned_assets[asset_id] = False
         player.betted_assets.append(dict(asset))
 
+        # Dealer trash talk on asset bet
+        cat, ctx = _determine_dealer_category(player, "betAsset")
+        if cat:
+            ctx["player_name"] = player.name
+            room.dealer_message, room.shown_dealer_lines = _select_dealer_message(
+                cat, room.shown_dealer_lines, ctx
+            )
+
         return [
             {
                 "type": "asset_bet",
@@ -193,6 +339,14 @@ class GameEngine:
             raise ValueError("Already in debt mode")
 
         player.in_debt_mode = True
+
+        # Dealer trash talk on debt activation
+        cat, ctx = _determine_dealer_category(player, "debtActivated")
+        if cat:
+            ctx["player_name"] = player.name
+            room.dealer_message, room.shown_dealer_lines = _select_dealer_message(
+                cat, room.shown_dealer_lines, ctx
+            )
 
         return [
             {
@@ -244,6 +398,24 @@ class GameEngine:
                     player.vig_amount += vig
                     player.vig_rate = rate
                     player.total_vig_paid += vig
+
+        # Dealer trash talk on deal — pick the most interesting bettor
+        deal_target = None
+        deal_best_score = -1
+        for pid in active_pids:
+            p = room.players[pid]
+            cat, _ = _determine_dealer_category(p, "deal")
+            score = 2 if cat == "playerDebt" else (1 if cat == "bigBet" else 0)
+            if score > deal_best_score:
+                deal_best_score = score
+                deal_target = p
+        if deal_target:
+            cat, ctx = _determine_dealer_category(deal_target, "deal")
+            if cat:
+                ctx["player_name"] = deal_target.name
+                room.dealer_message, room.shown_dealer_lines = _select_dealer_message(
+                    cat, room.shown_dealer_lines, ctx
+                )
 
         # Check for blackjacks
         dealer_bj = is_blackjack(room.dealer_hand)
@@ -519,6 +691,14 @@ class GameEngine:
                 if not has_more:
                     events.extend(self._advance_turn(room))
 
+        # Dealer trash talk on split
+        cat, ctx = _determine_dealer_category(player, "split")
+        if cat:
+            ctx["player_name"] = player.name
+            room.dealer_message, room.shown_dealer_lines = _select_dealer_message(
+                cat, room.shown_dealer_lines, ctx
+            )
+
         events.insert(0, {
             "type": "player_split",
             "player_id": player_id,
@@ -683,6 +863,9 @@ class GameEngine:
         dealer_bust = dealer_val > 21
         results = {}
 
+        # Snapshot bankrolls before resolution for "first time broke" detection
+        prev_bankrolls = {pid: room.players[pid].bankroll for pid in room.turn_order if pid in room.players}
+
         for pid in room.turn_order:
             if pid not in room.players:
                 continue
@@ -787,6 +970,16 @@ class GameEngine:
 
         room.phase = "result"
 
+        # Dealer trash talk on resolve — pick the most interesting outcome
+        target, prev_br = _pick_commentary_target(room, "resolve", prev_bankrolls)
+        if target:
+            cat, ctx = _determine_dealer_category(target, "resolve", prev_br)
+            if cat:
+                ctx["player_name"] = target.name
+                room.dealer_message, room.shown_dealer_lines = _select_dealer_message(
+                    cat, room.shown_dealer_lines, ctx
+                )
+
         return [
             {
                 "type": "round_result",
@@ -869,6 +1062,7 @@ class GameEngine:
             "dealer_hand": dealer_hand_visible,
             "dealer_value": hand_value(room.dealer_hand) if not should_hide else None,
             "current_player_id": current_pid,
+            "dealer_message": room.dealer_message,
             "players": {
                 pid: self._serialize_player(p)
                 for pid, p in room.players.items()

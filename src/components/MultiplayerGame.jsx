@@ -17,6 +17,8 @@ import ResultBanner from './ResultBanner'
 import FlyingChip from './FlyingChip'
 import QuickChat from './QuickChat'
 import SessionLeaderboard from './SessionLeaderboard'
+import DebtTracker from './DebtTracker'
+import { STARTING_BANKROLL } from '../constants/gameConfig'
 import styles from './MultiplayerGame.module.css'
 
 let flyingChipId = 0
@@ -28,6 +30,7 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
   useMultiplayerSound(state)
 
   const [flyingChips, setFlyingChips] = useState([])
+  const [showDebtTracker, setShowDebtTracker] = useState(false)
   const circleRef = useRef(null)
 
   // Local player data from server state
@@ -90,6 +93,7 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
   const handleClear = useCallback(() => dispatch({ type: MP_CLEAR_CHIPS }), [dispatch])
   const handleAllIn = useCallback(() => dispatch({ type: MP_ALL_IN }), [dispatch])
   const handleToggleAssetMenu = useCallback(() => dispatch({ type: MP_TOGGLE_ASSET_MENU }), [dispatch])
+  const handleToggleDebtTracker = useCallback(() => setShowDebtTracker(prev => !prev), [])
   const handleTakeLoan = useCallback(() => send({ type: 'take_loan' }), [send])
 
   // Submit bet to server (equivalent of "DEAL" in solo)
@@ -172,6 +176,7 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
         onToggleMute={() => dispatch({ type: MP_TOGGLE_MUTE })}
         isHost={state.isHost}
         onViewStats={handleViewStats}
+        onToggleDebtTracker={handleToggleDebtTracker}
       />
       <BankrollDisplay
         bankroll={bankroll}
@@ -186,7 +191,7 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
           hand={state.dealerHand}
           phase={state.phase}
           hideHoleCard={hideHoleCard}
-          dealerMessage=""
+          dealerMessage={state.dealerMessage || ""}
         />
 
         {/* Show betting circle only during betting phase for local player */}
@@ -295,6 +300,17 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
         <SessionLeaderboard
           stats={state.sessionStats}
           onDismiss={() => dispatch({ type: 'DISMISS_LEADERBOARD' })}
+        />
+      )}
+
+      {showDebtTracker && (
+        <DebtTracker
+          bankrollHistory={state.bankrollHistory}
+          peakBankroll={localPlayer?.stats?.peak_bankroll || STARTING_BANKROLL}
+          lowestBankroll={localPlayer?.stats?.lowest_bankroll || STARTING_BANKROLL}
+          handsPlayed={localPlayer?.stats?.hands_played || 0}
+          totalVigPaid={localPlayer?.stats?.total_vig_paid || 0}
+          onClose={handleToggleDebtTracker}
         />
       )}
     </div>

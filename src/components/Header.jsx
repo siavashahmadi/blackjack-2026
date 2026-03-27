@@ -99,11 +99,9 @@ function Header({
                 )}
               </button>
             )}
-            {!isMultiplayer && (
-              <button className={styles.menuItem} onClick={() => { closeMenu(); onToggleDebtTracker(); }}>
-                Financial Journey
-              </button>
-            )}
+            <button className={styles.menuItem} onClick={() => { closeMenu(); onToggleDebtTracker?.(); }}>
+              Financial Journey
+            </button>
             {!isMultiplayer && (
               <button className={styles.menuItem} onClick={() => { closeMenu(); onToggleNotifications(); }}>
                 Notifications {notificationsEnabled ? 'On' : 'Off'}

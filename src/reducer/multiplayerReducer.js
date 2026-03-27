@@ -34,6 +34,7 @@ function applyServerState(state, serverState) {
     dealerValue: serverState.dealer_value ?? state.dealerValue,
     currentPlayerId: serverState.current_player_id ?? state.currentPlayerId,
     playerStates: serverState.players ?? state.playerStates,
+    dealerMessage: serverState.dealer_message ?? state.dealerMessage,
   }
 }
 
@@ -172,12 +173,17 @@ export function multiplayerReducer(state, action) {
 
     case 'SERVER_BETTING_PHASE': {
       const newState = applyServerState(state, action.payload.state)
+      const bpLocalPlayer = newState.playerStates[state.playerId]
+      const seedHistory = state.bankrollHistory.length === 0 && bpLocalPlayer
+        ? [bpLocalPlayer.bankroll]
+        : state.bankrollHistory
       return {
         ...newState,
         chipStack: [],
         betSubmitted: false,
         showAssetMenu: false,
         nextRoundAt: null,
+        bankrollHistory: seedHistory,
       }
     }
 
@@ -237,12 +243,15 @@ export function multiplayerReducer(state, action) {
 
     case 'SERVER_ROUND_RESULT': {
       const newState = applyServerState(state, action.payload.state)
+      const rrLocalPlayer = newState.playerStates[state.playerId]
+      const newBankroll = rrLocalPlayer?.bankroll ?? 0
       return {
         ...newState,
         dealerHand: action.payload.dealer_hand,
         dealerValue: action.payload.dealer_value,
         phase: 'result',
         nextRoundAt: Date.now() + NEXT_ROUND_DELAY_MS,
+        bankrollHistory: [...state.bankrollHistory, newBankroll],
       }
     }
 

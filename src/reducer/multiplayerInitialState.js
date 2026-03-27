@@ -18,7 +18,7 @@ export const multiplayerInitialState = {
   currentPlayerId: null,
   playerStates: {},
 
-  // Local-only betting UX (chip stacking is client-side per spec Section 8.5)
+  // Local-only betting UX (chip stacking is client-side, server only sees final amount)
   chipStack: [],
   selectedChipValue: 100,
   showAssetMenu: false,
@@ -26,6 +26,12 @@ export const multiplayerInitialState = {
 
   // Result countdown
   nextRoundAt: null,
+
+  // Debt tracker
+  bankrollHistory: [],
+
+  // Dealer message (from server)
+  dealerMessage: '',
 
   // Quick chat
   chatMessages: [],

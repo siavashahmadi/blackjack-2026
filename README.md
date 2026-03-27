@@ -658,7 +658,8 @@ blackjack/
 ├── nginx.conf                             # SPA routing, WebSocket proxy, security headers
 ├── package.json
 ├── CLAUDE.md                              # AI coding instructions
-└── BLACKJACK_TECHNICAL_DIRECTION.md       # Full product spec (source of truth)
+├── ARCHITECTURE.md                        # Technical reference (state, actions, protocols)
+└── AUDIT.md                               # Audit findings and fix plan
 ```
 
 ---

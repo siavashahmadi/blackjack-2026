@@ -71,6 +71,10 @@ class GameRoom:
     dealer_turn_task: object | None = field(default=None, repr=False)
     _lock: object = field(default_factory=asyncio.Lock, repr=False)
 
+    # Dealer trash talk
+    dealer_message: str = ""
+    shown_dealer_lines: dict = field(default_factory=dict)
+
 
 # Global in-memory registry: room_code -> GameRoom
 rooms: dict[str, GameRoom] = {}

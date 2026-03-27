@@ -241,8 +241,9 @@ class TestPlaceBet(unittest.TestCase):
         self.assertEqual(len(self.room.dealer_hand), 2)
 
     def test_negative_bankroll_can_bet(self):
-        """Core mechanic: players can bet even when broke/in debt."""
+        """Core mechanic: players can bet even when broke/in debt mode."""
         self.room.players["player0"].bankroll = -50000
+        self.room.players["player0"].in_debt_mode = True
         events = self.eng.place_bet(self.room, "player0", 100)
         self.assertEqual(self.room.players["player0"].bet, 100)
 
@@ -679,7 +680,7 @@ class TestResolveHands(unittest.TestCase):
 
 
 class TestSplit(unittest.TestCase):
-    def _setup_split(self, card1_rank="K", card2_rank="Q"):
+    def _setup_split(self, card1_rank="K", card2_rank="K"):
         """Set up a room with a splittable hand."""
         room = make_room_with_players(1)
         eng = GameEngine()
@@ -702,14 +703,14 @@ class TestSplit(unittest.TestCase):
         return room, eng, p
 
     def test_split_creates_two_hands(self):
-        room, eng, p = self._setup_split("K", "Q")
+        room, eng, p = self._setup_split("K", "K")
         events = eng.split(room, "player0")
 
         self.assertEqual(len(p.hands), 2)
         self.assertEqual(p.hands[0]["bet"], 500)
         self.assertEqual(p.hands[1]["bet"], 500)
         self.assertEqual(p.hands[0]["cards"][0]["rank"], "K")
-        self.assertEqual(p.hands[1]["cards"][0]["rank"], "Q")
+        self.assertEqual(p.hands[1]["cards"][0]["rank"], "K")
         self.assertTrue(any(e["type"] == "player_split" for e in events))
 
     def test_split_aces_auto_stand(self):
@@ -740,11 +741,11 @@ class TestSplit(unittest.TestCase):
             eng.split(room, "player0")
 
     def test_max_split_hands(self):
-        room, eng, p = self._setup_split("K", "Q")
+        room, eng, p = self._setup_split("K", "K")
 
         # Fill up to 4 hands
         p.hands = [
-            create_hand_dict([make_card("K"), make_card("Q")], 500),
+            create_hand_dict([make_card("K"), make_card("K")], 500),
             create_hand_dict([make_card("10"), make_card("J")], 500),
             create_hand_dict([make_card("10"), make_card("K")], 500),
             create_hand_dict([make_card("10"), make_card("Q")], 500),
@@ -755,7 +756,7 @@ class TestSplit(unittest.TestCase):
 
     def test_split_no_bankroll_check(self):
         """Splitting never blocked by bankroll — casino extends infinite credit."""
-        room, eng, p = self._setup_split("K", "Q")
+        room, eng, p = self._setup_split("K", "K")
         p.bankroll = -100000
 
         events = eng.split(room, "player0")
@@ -916,6 +917,7 @@ class TestDoubleDownVig(unittest.TestCase):
         p.hands[0]["status"] = "playing"
         p.active_hand_index = 0
         p.bankroll = 50  # Only $50, hand bet is $100 (already committed)
+        p.in_debt_mode = True  # Must be in debt mode to double when bankroll < bet
         p.vig_amount = 0
         p.total_vig_paid = 0
 
@@ -926,11 +928,13 @@ class TestDoubleDownVig(unittest.TestCase):
 
         eng.double_down(room, "player0")
 
-        # Effective bankroll = max(0, 50 - 100) = 0 → full $100 additional borrowed
-        # Vig rate at bankroll $50 = 0.02 → vig = floor(100 * 0.02) = 2
-        self.assertEqual(p.vig_amount, 2)
-        self.assertEqual(p.total_vig_paid, 2)
-        self.assertEqual(p.bankroll, 48)  # 50 - 2
+        # After Tier 1 fix: hand being doubled excluded from committed
+        # Effective bankroll = max(0, 50 - 0) = 50, additional bet = 100
+        # Borrowed = max(0, 100 - 50) = 50. Vig rate at $50 = 0.02
+        # Vig = floor(50 * 0.02) = 1
+        self.assertEqual(p.vig_amount, 1)
+        self.assertEqual(p.total_vig_paid, 1)
+        self.assertEqual(p.bankroll, 49)  # 50 - 1
 
     def test_double_down_no_vig_when_covered(self):
         """Player with enough bankroll doubles — no vig charged."""
@@ -964,23 +968,28 @@ class TestSplitVigCommittedBets(unittest.TestCase):
     """Fix #2: split vig accounts for committed bets on existing hands."""
 
     def test_split_vig_accounts_for_committed_bet(self):
-        """When bankroll barely covers hand 1, split bet should be fully borrowed."""
-        room, eng, p = TestSplit._setup_split(TestSplit(), "K", "Q")
+        """When bankroll exactly covers the split hand, no vig is charged.
+
+        After Tier 1 fix: the hand being split is excluded from total_committed,
+        so effective_bankroll = max(0, 500 - 0) = 500, which fully covers the
+        new $500 split hand. Borrowed = 0, vig = 0.
+        """
+        room, eng, p = TestSplit._setup_split(TestSplit(), "K", "K")
         p.bankroll = 500  # Exactly covers hand 1's $500 bet
         p.vig_amount = 0
         p.total_vig_paid = 0
 
         eng.split(room, "player0")
 
-        # Effective bankroll = max(0, 500 - 500) = 0 → full $500 borrowed
-        # Vig rate at bankroll $500 = 0.02 → vig = floor(500 * 0.02) = 10
-        self.assertEqual(p.vig_amount, 10)
-        self.assertEqual(p.total_vig_paid, 10)
-        self.assertEqual(p.bankroll, 490)  # 500 - 10
+        # Hand being split excluded from committed → effective_bankroll = 500
+        # Borrowed = max(0, 500 - 500) = 0 → no vig
+        self.assertEqual(p.vig_amount, 0)
+        self.assertEqual(p.total_vig_paid, 0)
+        self.assertEqual(p.bankroll, 500)
 
     def test_split_no_vig_when_bankroll_covers_both(self):
         """When bankroll covers both hands, no vig is charged."""
-        room, eng, p = TestSplit._setup_split(TestSplit(), "K", "Q")
+        room, eng, p = TestSplit._setup_split(TestSplit(), "K", "K")
         p.bankroll = 10000
         p.vig_amount = 0
         p.total_vig_paid = 0
@@ -997,14 +1006,14 @@ class TestSplitAutoStandBothHands(unittest.TestCase):
     """Fix #9: both hands auto-stand on 21 after non-aces split."""
 
     def test_both_hands_21_auto_stand(self):
-        """Split two 10s, both get A → both auto-stand at 21."""
+        """Split two Ks, both get A → both auto-stand at 21."""
         room = make_room_with_players(1)
         eng = GameEngine()
         eng.start_game(room)
 
         p = room.players["player0"]
         p.status = "playing"
-        p.hands = [create_hand_dict([make_card("K"), make_card("Q")], 500)]
+        p.hands = [create_hand_dict([make_card("K"), make_card("K")], 500)]
         p.hands[0]["status"] = "playing"
         p.active_hand_index = 0
         p.bankroll = 10000
@@ -1024,14 +1033,14 @@ class TestSplitAutoStandBothHands(unittest.TestCase):
         self.assertEqual(hand_value(p.hands[1]["cards"]), 21)
 
     def test_hand2_21_auto_stand_hand1_playing(self):
-        """Split two 10s: hand1 gets 5 (playing), hand2 gets A (21, auto-stand)."""
+        """Split two Ks: hand1 gets 5 (playing), hand2 gets A (21, auto-stand)."""
         room = make_room_with_players(1)
         eng = GameEngine()
         eng.start_game(room)
 
         p = room.players["player0"]
         p.status = "playing"
-        p.hands = [create_hand_dict([make_card("K"), make_card("Q")], 500)]
+        p.hands = [create_hand_dict([make_card("K"), make_card("K")], 500)]
         p.hands[0]["status"] = "playing"
         p.active_hand_index = 0
         p.bankroll = 10000
@@ -1039,7 +1048,7 @@ class TestSplitAutoStandBothHands(unittest.TestCase):
         room.turn_order = ["player0"]
         room.phase = "playing"
         room.current_player_idx = 0
-        # Hand1 gets 5 (K+5=15), hand2 gets A (Q+A=21)
+        # Hand1 gets 5 (K+5=15), hand2 gets A (K+A=21)
         room.deck = [make_card("5"), make_card("A")] + [make_card("2")] * 50
 
         eng.split(room, "player0")

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Mobile-first blackjack web app with a dark casino green felt aesthetic. Core comedy mechanic: the player can never go broke — when bankroll hits $0, the casino extends unlimited credit, allowing the player to spiral into fictional debt (betting their watch, car, house, kidney, soul). Dealer trash-talks throughout, loan sharks send threatening messages, and achievements reward absurd behavior.
 
-Read `BLACKJACK_TECHNICAL_DIRECTION.md` for the full spec — it is the single source of truth for features, design, architecture, and phased task breakdown.
+Read `ARCHITECTURE.md` for the full technical reference — it describes the system as it actually exists today.
 
 ## Build & Dev Commands
 
@@ -62,7 +62,7 @@ Phases: `betting` → `playing` → `dealerTurn` → `result` → back to `betti
 
 ### Deck Management
 
-The component picks the cards, the reducer processes them. A helper function reads cards from `state.deck` and passes them via action payloads. This keeps the reducer deterministic and testable. See Section 5.5 in the technical direction doc.
+The component picks the cards, the reducer processes them. A helper function reads cards from `state.deck` and passes them via action payloads. This keeps the reducer deterministic and testable. See "Solo State Shape" in ARCHITECTURE.md.
 
 ## Critical Rules
 
@@ -72,9 +72,9 @@ The component picks the cards, the reducer processes them. A helper function rea
 4. **Background must look like green felt** — layered green base + noise/grain texture + radial "spotlight" gradient. Not just a dark gradient.
 5. **Constants in separate files** — never hardcode dealer lines, achievements, assets, or game config values in components.
 6. **Reducer purity** — no side effects, no randomness inside the reducer.
-7. **Chip stacking** — players TAP chips that animate into a betting circle. No text input for bets. Chips tracked as array (`chipStack`), not a single number. See Section 4.8.
+7. **Chip stacking** — players TAP chips that animate into a betting circle. No text input for bets. Chips tracked as array (`chipStack`), not a single number. See "Reducer Action Catalog" in ARCHITECTURE.md.
 8. **Chip colors** — green $25, black $100, purple $500, orange $1K, red $5K, cyan $25K. Must be visually distinct.
-9. **Dealer hits on soft 17** (A+6). Use `isSoft()`. See Section 3.1.
+9. **Dealer hits on soft 17** (A+6). Use `isSoft()`. See "Phase State Machine" in ARCHITECTURE.md.
 10. **Double down auto-stands** — player cannot hit after doubling. One card only.
 
 ## Deployment
@@ -85,18 +85,6 @@ The component picks the cards, the reducer processes them. A helper function rea
 - Backend (Phase 2): FastAPI container on port 3022
 - SSL via Cloudflare origin cert behind Nginx Proxy Manager
 
-## Task Reference
+## Reference
 
-Phase 1 tasks are in Section 10 of `BLACKJACK_TECHNICAL_DIRECTION.md`. Complete them in order (1.1 → 1.11). Each task should result in a working app. Key dependencies:
-
-- **1.1** Project scaffolding, CSS variables, felt background, PWA meta tags
-- **1.2** Card utilities, constants (cards, chips, assets, gameConfig), formatters
-- **1.3** Game reducer with all actions (especially chip system + RESOLVE_HAND)
-- **1.4** Card component + Hand component + felt background
-- **1.5** Full layout: Header, BankrollDisplay, DealerArea, PlayerArea, ChipTray, BettingCircle, ActionButtons — **playable blackjack by end of this task**
-- **1.6** Debt mechanic, asset betting, dynamic UI reactions
-- **1.7** Dealer trash talk system
-- **1.8** Loan shark messages
-- **1.9** Achievement system
-- **1.10** Polish: mobile optimization, sound effects (Web Audio API), localStorage persistence, performance
-- **1.11** Docker + nginx + deployment
+All Phase 1 tasks are complete. See `ARCHITECTURE.md` for current system documentation.
