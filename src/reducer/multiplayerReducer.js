@@ -89,6 +89,12 @@ export function multiplayerReducer(state, action) {
 
     case MP_ADD_CHIP: {
       if (state.betSubmitted) return state
+      const bankroll = getLocalBankroll(state)
+      const localPlayer = state.playerStates[state.playerId] || {}
+      const inDebtMode = localPlayer.in_debt_mode || false
+      if (bankroll <= 0 && !inDebtMode) return state
+      const newTotal = state.chipStack.reduce((sum, v) => sum + v, 0) + action.value
+      if (newTotal > bankroll && !inDebtMode) return state
       return {
         ...state,
         chipStack: [...state.chipStack, action.value],
@@ -115,7 +121,7 @@ export function multiplayerReducer(state, action) {
     case MP_ALL_IN: {
       if (state.betSubmitted) return state
       const bankroll = getLocalBankroll(state)
-      const amount = bankroll > 0 ? bankroll : (Math.abs(bankroll) || MIN_BET)
+      const amount = bankroll > 0 ? bankroll : MIN_BET
       return {
         ...state,
         chipStack: decomposeIntoChips(amount),

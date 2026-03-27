@@ -1,7 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { TABLE_LEVELS } from '../constants/tableLevels'
 import styles from './Header.module.css'
 
-function getSubtitle(bankroll) {
+function getSubtitle(bankroll, tableLevel) {
+  if (tableLevel !== undefined && tableLevel >= 0) {
+    return TABLE_LEVELS[tableLevel].subtitle
+  }
   if (bankroll < -1000000) return 'ECONOMIC DISASTER'
   if (bankroll < -100000) return 'ROCK BOTTOM SPEEDRUN'
   if (bankroll < -10000) return 'FINANCIAL RUIN SIMULATOR'
@@ -13,6 +17,7 @@ function getSubtitle(bankroll) {
 
 function Header({
   bankroll,
+  tableLevel,
   onReset,
   unlockedCount,
   onToggleAchievements,
@@ -70,7 +75,7 @@ function Header({
             {copied ? 'Copied!' : roomCode}
           </button>
         ) : (
-          <span className={styles.subtitle}>{getSubtitle(bankroll)}</span>
+          <span className={styles.subtitle}>{getSubtitle(bankroll, tableLevel)}</span>
         )}
       </div>
       <div className={styles.menuWrapper} ref={menuRef}>

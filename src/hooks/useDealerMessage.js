@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { setDealerMessage } from '../reducer/actions'
 import { selectDealerLine, determineDealerCategory } from '../utils/dealerMessages'
+import { TABLE_LEVELS } from '../constants/tableLevels'
 
 export function useDealerMessage(state, dispatch) {
   const prevStateRef = useRef(state)
@@ -117,6 +118,22 @@ export function useDealerMessage(state, dispatch) {
     )
     dispatch(setDealerMessage(message, updatedShownLines))
   }, [state.inDebtMode, dispatch])
+
+  // Table level changed — fires when tableLevelChanged is set
+  useEffect(() => {
+    if (!state.tableLevelChanged) return
+
+    const isUpgrade = state.tableLevelChanged.to > state.tableLevelChanged.from
+    const category = isUpgrade ? 'tableLevelUp' : 'tableLevelDown'
+    const tableName = TABLE_LEVELS[state.tableLevelChanged.to].name
+
+    const { message, updatedShownLines } = selectDealerLine(
+      category,
+      state.shownDealerLines,
+      { tableName }
+    )
+    dispatch(setDealerMessage(message, updatedShownLines))
+  }, [state.tableLevelChanged, dispatch])
 
   // Game reset — greeting when handsPlayed drops to 0
   useEffect(() => {

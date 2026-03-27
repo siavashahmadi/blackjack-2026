@@ -400,10 +400,12 @@ class GameEngine:
             raise ValueError("Can only double down on first two cards")
         if hand["is_split_aces"]:
             raise ValueError("Cannot double down on split aces")
+        if player.bankroll - hand["bet"] < 0 and not player.in_debt_mode:
+            raise ValueError("Cannot double down — insufficient funds")
 
         # Calculate vig on the additional bet (doubling the existing bet)
         additional_bet = hand["bet"]
-        total_committed = sum(h["bet"] for h in player.hands)
+        total_committed = sum(h["bet"] for i, h in enumerate(player.hands) if i != hand_index)
         effective_bankroll = max(0, player.bankroll - total_committed)
         borrowed = max(0, additional_bet - effective_bankroll)
         if borrowed > 0:
@@ -470,7 +472,7 @@ class GameEngine:
         original_bet = hand["bet"]
 
         # Calculate vig on the new hand's bet (borrowed portion)
-        total_committed = sum(h["bet"] for h in player.hands)
+        total_committed = sum(h["bet"] for i, h in enumerate(player.hands) if i != hand_index)
         effective_bankroll = max(0, player.bankroll - total_committed)
         borrowed = max(0, original_bet - effective_bankroll)
         if borrowed > 0:

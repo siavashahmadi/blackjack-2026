@@ -272,6 +272,7 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
             <ResultBanner
               result={localResult}
               bankroll={bankroll}
+              playerHands={localPlayer?.hands || []}
               autoAdvance
               nextRoundAt={state.nextRoundAt}
             />

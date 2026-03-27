@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
-import { MIN_BET } from '../constants/gameConfig'
+import { TABLE_LEVELS } from '../constants/tableLevels'
+import { ASSETS } from '../constants/assets'
 import ChipTray from './ChipTray'
 import AssetBetting from './AssetBetting'
 import styles from './BettingControls.module.css'
@@ -12,6 +13,7 @@ function BettingControls({
   bettedAssets,
   showAssetMenu,
   inDebtMode,
+  tableLevel = 0,
   onChipTap,
   onUndo,
   onClear,
@@ -32,13 +34,15 @@ function BettingControls({
 
   const chipTotal = chipStack.reduce((sum, v) => sum + v, 0)
   const assetTotal = bettedAssets.reduce((sum, a) => sum + a.value, 0)
-  const canDeal = (chipTotal + assetTotal) >= MIN_BET
+  const canDeal = (chipTotal + assetTotal) >= TABLE_LEVELS[tableLevel].minBet
 
-  // Debt gate logic
-  const hasOwnedAssets = Object.values(ownedAssets).some(v => v)
+  // Debt gate logic — check assets that are owned OR actively betted, AND unlocked at current bankroll
+  const hasAvailableAssets = ASSETS.some(
+    a => bankroll <= a.unlockThreshold && (ownedAssets[a.id] || bettedAssets.some(b => b.id === a.id))
+  )
   const isChipTrayBlocked = bankroll <= 0 && !inDebtMode
-  const showAssetGate = isChipTrayBlocked && hasOwnedAssets
-  const showLoanGate = isChipTrayBlocked && !hasOwnedAssets
+  const showAssetGate = isChipTrayBlocked && hasAvailableAssets
+  const showLoanGate = isChipTrayBlocked && !hasAvailableAssets
 
   const dealClasses = [
     styles.dealButton,
@@ -60,6 +64,7 @@ function BettingControls({
           selectedChipValue={selectedChipValue}
           onChipTap={onChipTap}
           disabled={isChipTrayBlocked}
+          tableLevel={tableLevel}
         />
         {showAssetGate && (
           <div className={styles.gateOverlay}>

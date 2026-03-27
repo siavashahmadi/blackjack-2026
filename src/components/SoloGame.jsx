@@ -1,14 +1,15 @@
-import { useReducer, useRef, useCallback, useMemo, useState } from 'react'
+import { useReducer, useRef, useCallback, useMemo, useState, useEffect } from 'react'
 import audioManager from '../utils/audioManager'
 import { gameReducer } from '../reducer/gameReducer'
 import { createInitialState } from '../reducer/initialState'
 import { createDeck, shuffle } from '../utils/cardUtils'
+import { TABLE_LEVELS } from '../constants/tableLevels'
 import {
   addChip, selectChip, deal, hit, doubleDown, split, betAsset, removeAsset,
   takeLoan, newRound, resetGame,
   UNDO_CHIP, CLEAR_CHIPS, ALL_IN, STAND,
   TOGGLE_ASSET_MENU, DISMISS_LOAN_SHARK, TOGGLE_ACHIEVEMENTS, DISMISS_ACHIEVEMENT,
-  TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, TOGGLE_DEBT_TRACKER,
+  TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, TOGGLE_DEBT_TRACKER, DISMISS_TABLE_TOAST,
 } from '../reducer/actions'
 import { useDealerTurn } from '../hooks/useDealerTurn'
 import { useDealerMessage } from '../hooks/useDealerMessage'
@@ -28,6 +29,7 @@ import LoanSharkPopup from './LoanSharkPopup'
 import AchievementToast from './AchievementToast'
 import AchievementPanel from './AchievementPanel'
 import DebtTracker from './DebtTracker'
+import TableLevelToast from './TableLevelToast'
 import FlyingChip from './FlyingChip'
 import styles from './SoloGame.module.css'
 
@@ -52,6 +54,17 @@ function SoloGame({ onBack }) {
   useAchievements(state, dispatch)
   useSound(state)
   useSessionPersistence(state, dispatch)
+
+  // Set felt color via data-table attribute on <html>
+  useEffect(() => {
+    const tableId = TABLE_LEVELS[state.tableLevel].id
+    document.documentElement.dataset.table = tableId
+    return () => delete document.documentElement.dataset.table
+  }, [state.tableLevel])
+
+  const handleDismissTableToast = useCallback(() => {
+    dispatch({ type: DISMISS_TABLE_TOAST })
+  }, [])
 
   // --- Handlers (stable via useCallback — dispatch and stateRef never change identity) ---
   const handleChipTap = useCallback((value, event) => {
@@ -192,6 +205,7 @@ function SoloGame({ onBack }) {
     <div className={styles.soloGame}>
       <Header
         bankroll={state.bankroll}
+        tableLevel={state.tableLevel}
         onReset={handleReset}
         unlockedCount={state.unlockedAchievements.length}
         onToggleAchievements={handleToggleAchievements}
@@ -252,6 +266,7 @@ function SoloGame({ onBack }) {
               bettedAssets={state.bettedAssets}
               showAssetMenu={state.showAssetMenu}
               inDebtMode={state.inDebtMode}
+              tableLevel={state.tableLevel}
               onChipTap={handleChipTap}
               onUndo={handleUndo}
               onClear={handleClear}
@@ -323,6 +338,13 @@ function SoloGame({ onBack }) {
         <LoanSharkPopup
           message={state.loanSharkQueue[0] || null}
           onDismiss={handleDismissLoanShark}
+        />
+      )}
+
+      {state.notificationsEnabled && state.tableLevelChanged && (
+        <TableLevelToast
+          levelChange={state.tableLevelChanged}
+          onDismiss={handleDismissTableToast}
         />
       )}
 

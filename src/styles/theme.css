@@ -48,6 +48,43 @@
   --action-btn-font: 15px;
 }
 
+/* ===== Table Level Felt Colors ===== */
+[data-table="emerald"] {
+  --felt-dark: #081a0a;
+  --felt-mid: #0e2e12;
+  --felt-light: #14501e;
+  --felt-highlight: #1c7030;
+  --felt-texture: #124218;
+}
+[data-table="highRoller"] {
+  --felt-dark: #081a1a;
+  --felt-mid: #0e2e2e;
+  --felt-light: #145050;
+  --felt-highlight: #1c7070;
+  --felt-texture: #124242;
+}
+[data-table="penthouse"] {
+  --felt-dark: #08101a;
+  --felt-mid: #0e1a30;
+  --felt-light: #142850;
+  --felt-highlight: #1c3870;
+  --felt-texture: #122040;
+}
+[data-table="vault"] {
+  --felt-dark: #0a0a08;
+  --felt-mid: #1a1a10;
+  --felt-light: #2a2a18;
+  --felt-highlight: #3a3a22;
+  --felt-texture: #1e1e12;
+}
+[data-table="obsidian"] {
+  --felt-dark: #0a0808;
+  --felt-mid: #1a1010;
+  --felt-light: #2a1818;
+  --felt-highlight: #3a2222;
+  --felt-texture: #1e1212;
+}
+
 /* iPhone SE and very small phones */
 @media (max-width: 374px) {
   :root {
@@ -110,6 +147,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: -1;
+  transition: background 1.2s ease;
   background:
     /* Spotlight: radial gradient, lighter center, darker edges */
     radial-gradient(

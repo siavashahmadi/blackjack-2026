@@ -28,6 +28,7 @@ export const SET_DEALER_MESSAGE = 'SET_DEALER_MESSAGE'
 export const TOGGLE_NOTIFICATIONS = 'TOGGLE_NOTIFICATIONS'
 export const TOGGLE_DEBT_TRACKER = 'TOGGLE_DEBT_TRACKER'
 export const TAKE_LOAN = 'TAKE_LOAN'
+export const DISMISS_TABLE_TOAST = 'DISMISS_TABLE_TOAST'
 
 // Action creators for actions with payloads
 export const addChip = (value) => ({ type: ADD_CHIP, value })

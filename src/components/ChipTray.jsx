@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
-import { getVisibleChips } from '../constants/chips'
+import { getTableChips } from '../constants/tableLevels'
 import Chip from './Chip'
 import styles from './ChipTray.module.css'
 
-function ChipTray({ bankroll, selectedChipValue, onChipTap, disabled }) {
-  const availableChips = useMemo(() => getVisibleChips(bankroll), [bankroll])
+function ChipTray({ bankroll, selectedChipValue, onChipTap, disabled, tableLevel = 0 }) {
+  const availableChips = useMemo(() => getTableChips(tableLevel, bankroll), [tableLevel, bankroll])
 
   const isBorrowed = bankroll <= 0
 

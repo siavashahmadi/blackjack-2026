@@ -16,27 +16,11 @@ export const CHIPS = [
   { value: 100000, label: '100K', color: '#DAA520', rimColor: '#B8860B', spotColor: '#FFF8DC', textColor: '#3D2B00' },
   // 500K - Platinum Silver
   { value: 500000, label: '500K', color: '#C0C0C0', rimColor: '#A0A0A0', spotColor: '#E8E8E8', textColor: '#2D2D2D' },
-  // 1M - Electric Aqua (THE POP CHIP)
+  // 1M - Royal Purple
   { value: 1000000, label: '1M', color: '#8E24AA', rimColor: '#6A1B9A', spotColor: '#E1BEE7', textColor: '#FFFFFF' },
+  // 10M - Obsidian Black (THE ULTIMATE CHIP)
+  { value: 10000000, label: '10M', color: '#1a1a1a', rimColor: '#0a0a0a', spotColor: '#cc3333', textColor: '#cc3333' },
 ]
 
 // Chip lookup by value for fast access
-const CHIP_MAP = Object.fromEntries(CHIPS.map(c => [c.value, c]))
-
-// Fixed chip sets by bankroll range — wide gaps prevent flickering
-const CHIP_SETS = [
-  { maxBankroll: -1000000, values: [5000, 25000, 100000, 500000, 1000000] },
-  { maxBankroll: -100000,  values: [1000, 5000, 25000, 100000, 500000] },
-  { maxBankroll: 0,        values: [100, 500, 1000, 5000, 25000] },
-  { maxBankroll: Infinity,  values: [25, 100, 500, 1000, 5000] },
-]
-
-/**
- * Returns exactly 5 chip objects for the player's current bankroll range.
- * Transitions only happen deeper into debt (one-directional), so the
- * positive-bankroll set is always stable.
- */
-export function getVisibleChips(bankroll) {
-  const set = CHIP_SETS.find(s => bankroll <= s.maxBankroll) || CHIP_SETS[CHIP_SETS.length - 1]
-  return set.values.map(v => CHIP_MAP[v])
-}
+export const CHIP_MAP = Object.fromEntries(CHIPS.map(c => [c.value, c]))

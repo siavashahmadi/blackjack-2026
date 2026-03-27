@@ -33,6 +33,10 @@ export function createInitialState() {
     // Debt gate
     inDebtMode: false,
 
+    // Table level
+    tableLevel: 0,
+    tableLevelChanged: null,
+
     // Game flow
     phase: 'betting',
     result: null,

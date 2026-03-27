@@ -1,7 +1,7 @@
 import {
   ADD_CHIP, UNDO_CHIP, CLEAR_CHIPS, SELECT_CHIP, ALL_IN,
   DEAL, BET_ASSET, REMOVE_ASSET, HIT, STAND, DOUBLE_DOWN, SPLIT, DEALER_DRAW,
-  RESOLVE_HAND, NEW_ROUND, RESET_GAME, TAKE_LOAN,
+  RESOLVE_HAND, NEW_ROUND, RESET_GAME, TAKE_LOAN, DISMISS_TABLE_TOAST,
   TOGGLE_ASSET_MENU, TOGGLE_ACHIEVEMENTS,
   DISMISS_ACHIEVEMENT, DISMISS_LOAN_SHARK, UNLOCK_ACHIEVEMENT, LOAD_ACHIEVEMENTS,
   TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, TOGGLE_DEBT_TRACKER, SET_DEALER_MESSAGE, SET_LOAN_SHARK_MESSAGE,
@@ -9,9 +9,11 @@ import {
 } from './actions'
 import { createInitialState, createHandObject } from './initialState'
 import { CHIPS } from '../constants/chips'
-import { MIN_BET, BLACKJACK_PAYOUT, RESHUFFLE_THRESHOLD } from '../constants/gameConfig'
+import { BLACKJACK_PAYOUT, RESHUFFLE_THRESHOLD } from '../constants/gameConfig'
+import { getTableLevel, TABLE_LEVELS } from '../constants/tableLevels'
 import { cardValue, handValue, isBlackjack } from '../utils/cardUtils'
 import { getVigRate } from '../constants/vigRates'
+import { ASSETS } from '../constants/assets'
 
 // Chip values sorted descending for greedy decomposition
 const CHIP_VALUES_DESC = [...CHIPS].map(c => c.value).sort((a, b) => b - a)
@@ -109,8 +111,9 @@ export function gameReducer(state, action) {
       if (state.phase !== 'betting') return state
       // Block when broke and not in debt mode
       if (state.bankroll <= 0 && !state.inDebtMode) return state
+      const tableMinBet = TABLE_LEVELS[state.tableLevel].minBet
       const chipStack = state.bankroll <= 0
-        ? decomposeIntoChips(MIN_BET)
+        ? decomposeIntoChips(tableMinBet)
         : decomposeIntoChips(state.bankroll)
       return { ...state, chipStack, isAllIn: true }
     }
@@ -118,7 +121,7 @@ export function gameReducer(state, action) {
     case DEAL: {
       if (state.phase !== 'betting') return state
       const assetValue = state.bettedAssets.reduce((sum, a) => sum + a.value, 0)
-      if (sumChipStack(state.chipStack) + assetValue < MIN_BET) return state
+      if (sumChipStack(state.chipStack) + assetValue < TABLE_LEVELS[state.tableLevel].minBet) return state
       if (!action.cards || action.cards.length !== 4) return state
 
       const betAmount = sumChipStack(state.chipStack)
@@ -221,8 +224,8 @@ export function gameReducer(state, action) {
         return { ...state, playerHands, deck: state.deck.slice(1), ...advancement }
       }
 
-      // Check if hitting to 21 should auto-stand (on split hands only)
-      if (value === 21 && state.playerHands.length > 1) {
+      // Auto-stand on 21 to prevent accidental bust
+      if (value === 21) {
         const autoStandHands = playerHands.map((h, i) =>
           i === state.activeHandIndex ? { ...h, status: 'standing' } : h
         )
@@ -245,10 +248,14 @@ export function gameReducer(state, action) {
       const hand = activeHand(state)
       if (!hand || hand.cards.length !== 2) return state
       if (hand.isSplitAces) return state
+      // Debt gate: block doubling when it would push bankroll negative without debt mode
+      if (state.bankroll - hand.bet < 0 && !state.inDebtMode) return state
 
       // Vig on the additional bet (same amount as original hand bet)
       const additionalBet = hand.bet
-      const totalCommitted = state.playerHands.reduce((sum, h) => sum + h.bet, 0)
+      const totalCommitted = state.playerHands
+        .filter((_, i) => i !== state.activeHandIndex)
+        .reduce((sum, h) => sum + h.bet, 0)
       const effectiveBankroll = Math.max(0, state.bankroll - totalCommitted)
       const borrowedAmount = Math.max(0, additionalBet - effectiveBankroll)
       const vigRate = borrowedAmount > 0 ? getVigRate(state.bankroll) : 0
@@ -305,7 +312,9 @@ export function gameReducer(state, action) {
       )
 
       // Vig on the new hand's bet (hand2 is the additional bet)
-      const totalCommitted = state.playerHands.reduce((sum, h) => sum + h.bet, 0)
+      const totalCommitted = state.playerHands
+        .filter((_, i) => i !== state.activeHandIndex)
+        .reduce((sum, h) => sum + h.bet, 0)
       const effectiveBankroll = Math.max(0, state.bankroll - totalCommitted)
       const borrowedAmount = Math.max(0, splitHand.bet - effectiveBankroll)
       const vigRate = borrowedAmount > 0 ? getVigRate(state.bankroll) : 0
@@ -433,6 +442,17 @@ export function gameReducer(state, action) {
       // Exit debt mode if bankroll recovered above $0
       const newInDebtMode = state.inDebtMode && newBankroll <= 0
 
+      // Table level progression (dynamic — based on current bankroll)
+      const newTableLevel = getTableLevel(newBankroll)
+      const tableLevelChanged = newTableLevel !== state.tableLevel
+        ? { from: state.tableLevel, to: newTableLevel }
+        : null
+      // Auto-correct selectedChipValue if it's not in the new table's chip set
+      const newTableChips = TABLE_LEVELS[newTableLevel].chipValues
+      const selectedChipValue = newTableChips.includes(state.selectedChipValue)
+        ? state.selectedChipValue
+        : newTableChips[0]
+
       return {
         ...state,
         bankroll: newBankroll,
@@ -443,6 +463,9 @@ export function gameReducer(state, action) {
         chipStack: [],
         phase: 'result',
         result: aggregateResult,
+        tableLevel: newTableLevel,
+        tableLevelChanged,
+        selectedChipValue,
         handsPlayed: state.handsPlayed + 1,
         winStreak: isWin ? state.winStreak + 1 : (isLoss ? 0 : state.winStreak),
         loseStreak: isLoss ? state.loseStreak + 1 : (isWin ? 0 : state.loseStreak),
@@ -476,7 +499,12 @@ export function gameReducer(state, action) {
         showAssetMenu: false,
         vigAmount: 0,
         vigRate: 0,
+        tableLevelChanged: null,
       }
+    }
+
+    case DISMISS_TABLE_TOAST: {
+      return { ...state, tableLevelChanged: null }
     }
 
     case RESET_GAME: {
@@ -498,9 +526,11 @@ export function gameReducer(state, action) {
     case TAKE_LOAN: {
       if (state.phase !== 'betting') return state
       if (state.bankroll > 0) return state
-      // Can only take a loan when all assets are gone
-      const hasAssets = Object.values(state.ownedAssets).some(v => v)
-      if (hasAssets) return state
+      // Can only take a loan when no assets are available (owned + unlocked at current bankroll)
+      const hasUnlockedAssets = ASSETS.some(
+        a => state.bankroll <= a.unlockThreshold && (state.ownedAssets[a.id] || state.bettedAssets.some(b => b.id === a.id))
+      )
+      if (hasUnlockedAssets) return state
       return { ...state, inDebtMode: true }
     }
 
