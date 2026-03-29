@@ -70,6 +70,10 @@ export function useSound(state) {
         audioManager.play('bust')
       } else if (state.result === 'lose') {
         audioManager.play('lose')
+      } else if (state.result === 'mixed') {
+        audioManager.play('win')
+      } else if (state.result === 'push') {
+        audioManager.play('card_flip')
       }
     }
 

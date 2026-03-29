@@ -44,7 +44,7 @@ export function useDealerTurn(state, dispatch) {
       }, DEALER_STAND_DELAY)
       return () => clearTimeout(timeout)
     }
-  }, [state.phase, state.dealerHand, state.playerHands, dispatch])
+  }, [state.phase, state.dealerHand, dispatch])
 
   // Handle natural blackjack / all-bust resolution
   // DEAL sets phase='result' with result set, but doesn't update bankroll/stats.
@@ -53,7 +53,7 @@ export function useDealerTurn(state, dispatch) {
     if (
       state.phase === 'result' &&
       state.result !== null &&
-      state.chipStack.length > 0
+      (state.chipStack.length > 0 || state.bettedAssets.length > 0)
     ) {
       // Build outcomes from existing hand results
       const outcomes = state.playerHands.map(h => h.result || state.result)
@@ -62,5 +62,5 @@ export function useDealerTurn(state, dispatch) {
       }, 300)
       return () => clearTimeout(timeout)
     }
-  }, [state.phase, state.result, state.chipStack.length, state.playerHands, dispatch])
+  }, [state.phase, state.result, state.chipStack.length, state.bettedAssets.length, dispatch])
 }

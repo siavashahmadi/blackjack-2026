@@ -7,11 +7,6 @@ export function useDealerMessage(state, dispatch) {
   const prevStateRef = useRef(state)
   const hasInitRef = useRef(false)
 
-  // Update prev state ref on every render
-  useEffect(() => {
-    prevStateRef.current = state
-  })
-
   // Greeting on initial mount
   useEffect(() => {
     if (hasInitRef.current) return
@@ -149,4 +144,9 @@ export function useDealerMessage(state, dispatch) {
     )
     dispatch(setDealerMessage(message, updatedShownLines))
   }, [state.handsPlayed, dispatch])
+
+  // Always update prevStateRef LAST so other effects read the previous state
+  useEffect(() => {
+    prevStateRef.current = state
+  })
 }

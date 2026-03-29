@@ -5,6 +5,7 @@ const STORAGE_KEY = 'blackjack_achievements'
 
 const ASSET_ACHIEVEMENT_MAP = {
   watch: 'bet_watch',
+  jewelry: 'bet_jewelry',
   car: 'bet_car',
   kidney: 'bet_kidney',
   house: 'bet_house',
@@ -39,8 +40,13 @@ function checkAchievements(prevState, state) {
   if (state.bankroll < -50000) grant('deep_debt')
   if (state.bankroll < -1000000) grant('million_debt')
 
-  // Comeback: win while previously in debt
-  if (isWin && prevState.bankroll < 0) grant('comeback')
+  // Net payout for mixed-result awareness (splits)
+  const netPayout = state.playerHands?.reduce((sum, h) => sum + (h.payout || 0), 0) ?? 0
+  const effectiveWin = isWin || (state.result === 'mixed' && netPayout > 0)
+  const effectiveLoss = isLoss || (state.result === 'mixed' && netPayout < 0)
+
+  // Comeback: win while previously in debt (net-positive mixed counts)
+  if (effectiveWin && prevState.bankroll < 0) grant('comeback')
 
   // Streaks
   if (state.winStreak >= 5) grant('win_streak_5')
@@ -48,17 +54,22 @@ function checkAchievements(prevState, state) {
   if (state.loseStreak >= 5) grant('lose_streak_5')
   if (state.loseStreak >= 10) grant('lose_streak_10')
 
-  // Double down
-  const anyDoubledDown = state.playerHands?.some(h => h.isDoubledDown) ?? false
-  if (anyDoubledDown && isWin) grant('double_down_win')
-  if (anyDoubledDown && isLoss) grant('double_down_loss')
+  // Double down — check the specific doubled hand's result, not aggregate
+  const doubledHandWon = state.playerHands?.some(h =>
+    h.isDoubledDown && (h.result === 'win' || h.result === 'dealerBust' || h.result === 'blackjack')
+  ) ?? false
+  const doubledHandLost = state.playerHands?.some(h =>
+    h.isDoubledDown && (h.result === 'lose' || h.result === 'bust')
+  ) ?? false
+  if (doubledHandWon) grant('double_down_win')
+  if (doubledHandLost) grant('double_down_loss')
 
   // Blackjack
   if (state.result === 'blackjack') grant('blackjack')
 
-  // All-in
-  if (state.isAllIn && isWin) grant('all_in_win')
-  if (state.isAllIn && isLoss) grant('all_in_loss')
+  // All-in (net-positive mixed counts as win, net-negative as loss)
+  if (state.isAllIn && effectiveWin) grant('all_in_win')
+  if (state.isAllIn && effectiveLoss) grant('all_in_loss')
 
   // Asset betting — use prevState since RESOLVE_HAND clears bettedAssets
   for (const asset of prevState.bettedAssets) {

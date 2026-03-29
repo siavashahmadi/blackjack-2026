@@ -47,6 +47,15 @@ export function useLoanShark(state, dispatch) {
     }
   }, [state.bankroll])
 
+  // Reset on game reset (handsPlayed drops to 0)
+  useEffect(() => {
+    if (state.handsPlayed === 0) {
+      clearTimeout(timerRef.current)
+      pendingRef.current = { messages: [], thresholds: [] }
+      prevBankrollRef.current = state.bankroll
+    }
+  }, [state.handsPlayed, state.bankroll])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => clearTimeout(timerRef.current)
