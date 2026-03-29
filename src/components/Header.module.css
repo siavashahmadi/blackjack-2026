@@ -57,12 +57,13 @@
   flex-direction: column;
   justify-content: center;
   gap: 4px;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 8px;
   background: none;
   border: none;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .hamburger:active {
@@ -106,6 +107,7 @@
   color: var(--text-primary);
   cursor: pointer;
   text-align: left;
+  touch-action: manipulation;
 }
 
 .menuItem:active {

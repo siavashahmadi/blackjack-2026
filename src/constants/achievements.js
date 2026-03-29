@@ -6,6 +6,7 @@ export const ACHIEVEMENTS = [
   { id: 'deep_debt', name: 'In Too Deep', description: 'Owe more than $50,000', emoji: '🕳️' },
   { id: 'million_debt', name: 'National Debt', description: 'Owe more than $1,000,000', emoji: '🇺🇸' },
   { id: 'bet_watch', name: "Time's Up", description: 'Bet your watch', emoji: '⌚' },
+  { id: 'bet_jewelry', name: 'Family Heirlooms', description: 'Bet your jewelry', emoji: '💎' },
   { id: 'bet_car', name: 'Walking Home', description: 'Bet your Tesla', emoji: '🚗' },
   { id: 'bet_kidney', name: 'Organ Donor', description: 'Bet a kidney', emoji: '🫘' },
   { id: 'bet_house', name: 'Homeless by Choice', description: 'Bet your house', emoji: '🏠' },

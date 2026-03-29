@@ -1,6 +1,7 @@
 .container {
   max-width: 480px;
   margin: 0 auto;
+  min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -55,15 +56,18 @@
   background: var(--surface);
   cursor: pointer;
   transition: all 0.2s ease;
+  touch-action: manipulation;
 }
 
 .modeButton:active {
   transform: scale(0.97);
 }
 
-.modeButton:hover {
-  border-color: var(--gold-dim);
-  background: rgba(0, 0, 0, 0.35);
+@media (hover: hover) {
+  .modeButton:hover {
+    border-color: var(--gold-dim);
+    background: rgba(0, 0, 0, 0.35);
+  }
 }
 
 .modeIcon {

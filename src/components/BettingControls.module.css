@@ -26,6 +26,8 @@
   padding: 6px 14px;
   border-radius: 6px;
   transition: opacity 0.15s ease;
+  min-height: 44px;
+  touch-action: manipulation;
 }
 
 .smallButton:disabled {
@@ -47,6 +49,8 @@
   padding: 6px 14px;
   border-radius: 6px;
   margin-left: auto;
+  min-height: 44px;
+  touch-action: manipulation;
 }
 
 .allInButton:active {
@@ -85,6 +89,7 @@
   letter-spacing: 2px;
   box-shadow: 0 2px 12px var(--gold-glow);
   transition: transform 0.1s ease, opacity 0.15s ease;
+  touch-action: manipulation;
 }
 
 .dealButton:active {

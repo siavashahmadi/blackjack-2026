@@ -1,6 +1,7 @@
 .container {
   max-width: 480px;
   margin: 0 auto;
+  min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -13,7 +14,7 @@
 
 .backButton {
   position: absolute;
-  top: 16px;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
   left: 16px;
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
@@ -21,6 +22,7 @@
   color: var(--text-dim);
   letter-spacing: 1px;
   padding: 8px 12px;
+  touch-action: manipulation;
 }
 
 .brand {
@@ -79,6 +81,8 @@
   text-align: center;
   outline: none;
   transition: border-color 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .nameInput:focus {
@@ -102,6 +106,7 @@
   letter-spacing: 2px;
   cursor: pointer;
   transition: transform 0.1s;
+  touch-action: manipulation;
 }
 
 .createButton:active:not(:disabled) {
@@ -146,6 +151,7 @@
   letter-spacing: 2px;
   cursor: pointer;
   transition: all 0.2s;
+  touch-action: manipulation;
 }
 
 .joinViewButton:active {
@@ -181,6 +187,8 @@
   text-transform: uppercase;
   outline: none;
   transition: border-color 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .codeChar:focus {
@@ -201,6 +209,7 @@
   letter-spacing: 2px;
   cursor: pointer;
   transition: transform 0.1s;
+  touch-action: manipulation;
 }
 
 .joinButton:active:not(:disabled) {
@@ -218,6 +227,7 @@
   color: var(--text-dim);
   letter-spacing: 1px;
   padding: 8px 12px;
+  touch-action: manipulation;
 }
 
 /* Waiting room */
@@ -350,6 +360,7 @@
   cursor: pointer;
   transition: transform 0.1s;
   margin-top: 8px;
+  touch-action: manipulation;
 }
 
 .startButton:active:not(:disabled) {
@@ -376,6 +387,7 @@
   letter-spacing: 1px;
   padding: 8px 12px;
   margin-top: 4px;
+  touch-action: manipulation;
 }
 
 .error {

@@ -106,6 +106,7 @@
   box-shadow: 0 2px 12px var(--gold-glow);
   transition: transform 0.1s ease;
   width: 100%;
+  touch-action: manipulation;
 }
 
 .nextButton:active {

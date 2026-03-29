@@ -8,6 +8,7 @@
   background: rgba(0, 0, 0, 0.6);
   animation: fadeIn 0.3s ease-out both;
   cursor: pointer;
+  overscroll-behavior: contain;
 }
 
 .popup {

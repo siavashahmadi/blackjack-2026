@@ -38,7 +38,7 @@ function BettingControls({
 
   // Debt gate logic — check assets that are owned OR actively betted, AND unlocked at current bankroll
   const hasAvailableAssets = ASSETS.some(
-    a => bankroll <= a.unlockThreshold && (ownedAssets[a.id] || bettedAssets.some(b => b.id === a.id))
+    a => bankroll <= a.unlockThreshold && ownedAssets[a.id] && !bettedAssets.some(b => b.id === a.id)
   )
   const minBet = TABLE_LEVELS[tableLevel].minBet
   const isChipTrayBlocked = bankroll < minBet && !inDebtMode
