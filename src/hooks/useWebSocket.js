@@ -4,6 +4,11 @@ import { WS_URL } from '../constants/gameConfig'
 const MAX_RECONNECT_ATTEMPTS = 3
 const RECONNECT_BASE_DELAY = 1000
 
+// Only queue messages that are safe to replay after reconnect.
+// Game-action messages (hit, stand, double_down, split, place_bet, etc.)
+// must NOT be queued — replaying them after reconnect causes duplicate actions.
+const QUEUEABLE_TYPES = new Set(['create_room', 'join_room', 'reconnect'])
+
 /**
  * Manages a WebSocket connection to the multiplayer server.
  *
@@ -157,11 +162,15 @@ export function useWebSocket(dispatch) {
 
   const send = useCallback((message) => {
     if (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
-      if (pendingMessages.length >= MAX_PENDING_MESSAGES) {
-        pendingMessages.shift() // drop oldest — newest reflects latest intent
+      if (QUEUEABLE_TYPES.has(message.type)) {
+        if (pendingMessages.length >= MAX_PENDING_MESSAGES) {
+          pendingMessages.shift() // drop oldest — newest reflects latest intent
+        }
+        pendingMessages.push(message)
+        console.warn('[WS] Queued message — not connected:', message.type)
+      } else {
+        console.warn('[WS] Dropped non-queueable message — not connected:', message.type)
       }
-      pendingMessages.push(message)
-      console.warn('[WS] Queued message — not connected')
       return
     }
     activeWs.send(JSON.stringify(message))

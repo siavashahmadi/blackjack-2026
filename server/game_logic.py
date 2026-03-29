@@ -511,7 +511,9 @@ class GameEngine:
                     "state": self.get_room_state(room),
                 }
             )
-            if not has_more:
+            if has_more:
+                events.append({"type": "your_turn", "player_id": player_id})
+            else:
                 events.extend(self._advance_turn(room))
         elif val == 21 and len(player.hands) > 1:
             # Auto-stand on 21 for split hands
@@ -528,7 +530,9 @@ class GameEngine:
                     "state": self.get_room_state(room),
                 }
             )
-            if not has_more:
+            if has_more:
+                events.append({"type": "your_turn", "player_id": player_id})
+            else:
                 events.extend(self._advance_turn(room))
         else:
             events.append(
@@ -562,7 +566,9 @@ class GameEngine:
                 "state": self.get_room_state(room),
             }
         ]
-        if not has_more:
+        if has_more:
+            events.append({"type": "your_turn", "player_id": player_id})
+        else:
             events.extend(self._advance_turn(room))
 
         return events
@@ -622,7 +628,9 @@ class GameEngine:
                 "state": self.get_room_state(room),
             }
         ]
-        if not has_more:
+        if has_more:
+            events.append({"type": "your_turn", "player_id": player_id})
+        else:
             events.extend(self._advance_turn(room))
 
         return events
@@ -683,7 +691,9 @@ class GameEngine:
         if is_aces:
             # Both hands auto-stand, advance past them
             has_more = self._advance_hand(player)
-            if not has_more:
+            if has_more:
+                events.append({"type": "your_turn", "player_id": player_id})
+            else:
                 events.extend(self._advance_turn(room))
         else:
             if hand_value(new_hand1["cards"]) == 21:
@@ -693,7 +703,9 @@ class GameEngine:
             # Advance past any auto-stood hands
             if player.hands[player.active_hand_index]["status"] != "playing":
                 has_more = self._advance_hand(player)
-                if not has_more:
+                if has_more:
+                    events.append({"type": "your_turn", "player_id": player_id})
+                else:
                     events.extend(self._advance_turn(room))
 
         # Dealer trash talk on split

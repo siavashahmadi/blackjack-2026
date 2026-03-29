@@ -262,12 +262,30 @@ export function multiplayerReducer(state, action) {
 
     case 'SERVER_PLAYER_DISCONNECTED': {
       const { players } = action.payload
-      return { ...state, ...extractPlayersInfo(state.playerId, players) }
+      const newState = { ...state, ...extractPlayersInfo(state.playerId, players) }
+      if (newState.playerStates) {
+        const connectedIds = new Set(players.filter(p => p.connected).map(p => p.player_id))
+        const updatedStates = {}
+        for (const [pid, ps] of Object.entries(newState.playerStates)) {
+          updatedStates[pid] = { ...ps, connected: connectedIds.has(pid) }
+        }
+        newState.playerStates = updatedStates
+      }
+      return newState
     }
 
     case 'SERVER_PLAYER_RECONNECTED': {
       const { players } = action.payload
-      return { ...state, ...extractPlayersInfo(state.playerId, players) }
+      const newState = { ...state, ...extractPlayersInfo(state.playerId, players) }
+      if (newState.playerStates) {
+        const connectedIds = new Set(players.filter(p => p.connected).map(p => p.player_id))
+        const updatedStates = {}
+        for (const [pid, ps] of Object.entries(newState.playerStates)) {
+          updatedStates[pid] = { ...ps, connected: connectedIds.has(pid) }
+        }
+        newState.playerStates = updatedStates
+      }
+      return newState
     }
 
     case 'SERVER_LEFT_ROOM':
