@@ -1543,7 +1543,7 @@ describe('REMOVE_ASSET', () => {
 // 18. Table level progression
 // ===========================================================================
 describe('Table level progression', () => {
-  it('upgrades tableLevel when bankroll crosses threshold after win', () => {
+  it('sets pendingTableUpgrade when bankroll crosses upgrade threshold', () => {
     // bankroll just below 100K (Emerald Room threshold), win enough to cross it
     const base = createInitialState()
     const hand = createHandObject([card('K'), card('Q')], 50000)
@@ -1559,8 +1559,9 @@ describe('Table level progression', () => {
       tableLevel: 0,
     }
     const next = gameReducer(state, { type: RESOLVE_HAND, outcomes: ['win'] })
-    // 60000 + 50000 = 110000 >= 100000 → tableLevel 1
-    expect(next.tableLevel).toBe(1)
+    // 60000 + 50000 = 110000 >= 100000 → pending upgrade, stays at level 0
+    expect(next.tableLevel).toBe(0)
+    expect(next.pendingTableUpgrade).toEqual({ from: 0, to: 1 })
   })
 
   it('downgrades tableLevel when bankroll drops below threshold after loss', () => {
@@ -1582,10 +1583,11 @@ describe('Table level progression', () => {
     expect(next.tableLevel).toBe(0)
   })
 
-  it('sets tableLevelChanged when level changes', () => {
+  it('sets tableLevelChanged on downgrade, pendingTableUpgrade on upgrade', () => {
+    // Upgrade: sets pending, not tableLevelChanged
     const base = createInitialState()
     const hand = createHandObject([card('K'), card('Q')], 50000)
-    const state = {
+    const upgradeState = {
       ...base,
       phase: 'playing',
       playerHands: [hand],
@@ -1596,8 +1598,26 @@ describe('Table level progression', () => {
       bankroll: 60000,
       tableLevel: 0,
     }
-    const next = gameReducer(state, { type: RESOLVE_HAND, outcomes: ['win'] })
-    expect(next.tableLevelChanged).toEqual({ from: 0, to: 1 })
+    const upNext = gameReducer(upgradeState, { type: RESOLVE_HAND, outcomes: ['win'] })
+    expect(upNext.tableLevelChanged).toBeNull()
+    expect(upNext.pendingTableUpgrade).toEqual({ from: 0, to: 1 })
+
+    // Downgrade: sets tableLevelChanged directly
+    const downHand = createHandObject([card('K'), card('Q')], 80000)
+    const downState = {
+      ...base,
+      phase: 'playing',
+      playerHands: [downHand],
+      activeHandIndex: 0,
+      dealerHand: [card('7'), card('8')],
+      deck: makeDeck(),
+      bankrollHistory: [110000],
+      bankroll: 110000,
+      tableLevel: 1,
+    }
+    const downNext = gameReducer(downState, { type: RESOLVE_HAND, outcomes: ['lose'] })
+    expect(downNext.tableLevelChanged).toEqual({ from: 1, to: 0 })
+    expect(downNext.pendingTableUpgrade).toBeNull()
   })
 
   it('tableLevelChanged is null when level does not change', () => {
@@ -1661,17 +1681,17 @@ describe('Debt mechanics integration', () => {
     expect(next2.vigAmount).toBe(7)
   })
 
-  it('ALL_IN in debt mode uses table max bet, not bankroll', () => {
+  it('ALL_IN in debt mode bets absolute value of bankroll', () => {
     const state = {
       ...createInitialState(),
       deck: makeDeck(),
       bankroll: -10000,
       inDebtMode: true,
-      tableLevel: 0, // maxBet = 5000
+      tableLevel: 0,
     }
     const next = gameReducer(state, { type: ALL_IN })
     const total = next.chipStack.reduce((s, v) => s + v, 0)
-    expect(total).toBe(5000) // TABLE_LEVELS[0].maxBet
+    expect(total).toBe(10000) // Math.abs(bankroll)
   })
 
   it('inDebtMode persists after push (no bankroll recovery)', () => {

@@ -36,6 +36,8 @@ export function createInitialState() {
     // Table level
     tableLevel: 0,
     tableLevelChanged: null,
+    pendingTableUpgrade: null,
+    declinedTableUpgrade: null,
 
     // Game flow
     phase: 'betting',

@@ -11,6 +11,7 @@ import {
   UNDO_CHIP, CLEAR_CHIPS, ALL_IN, STAND,
   TOGGLE_ASSET_MENU, DISMISS_LOAN_SHARK, TOGGLE_ACHIEVEMENTS, DISMISS_ACHIEVEMENT,
   TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, TOGGLE_DEBT_TRACKER, DISMISS_TABLE_TOAST,
+  ACCEPT_TABLE_UPGRADE, DECLINE_TABLE_UPGRADE,
 } from '../reducer/actions'
 import { useDealerTurn } from '../hooks/useDealerTurn'
 import { useDealerMessage } from '../hooks/useDealerMessage'
@@ -33,6 +34,7 @@ import AchievementToast from './AchievementToast'
 import AchievementPanel from './AchievementPanel'
 import DebtTracker from './DebtTracker'
 import TableLevelToast from './TableLevelToast'
+import TableUpgradeModal from './TableUpgradeModal'
 import FlyingChip from './FlyingChip'
 import styles from './SoloGame.module.css'
 
@@ -79,6 +81,12 @@ function SoloGame({ onBack }) {
 
   const handleDismissTableToast = useCallback(() => {
     dispatch({ type: DISMISS_TABLE_TOAST })
+  }, [])
+  const handleAcceptUpgrade = useCallback(() => {
+    dispatch({ type: ACCEPT_TABLE_UPGRADE })
+  }, [])
+  const handleDeclineUpgrade = useCallback(() => {
+    dispatch({ type: DECLINE_TABLE_UPGRADE })
   }, [])
 
   const handleClear = useCallback(() => dispatch({ type: CLEAR_CHIPS }), [])
@@ -211,6 +219,9 @@ function SoloGame({ onBack }) {
       />
 
       <div className={styles.table}>
+        <span className={styles.feltWatermark} key={TABLE_LEVELS[state.tableLevel].id}>
+          {TABLE_LEVELS[state.tableLevel].subtitle}
+        </span>
         <DealerArea
           hand={state.dealerHand}
           phase={state.phase}
@@ -353,6 +364,14 @@ function SoloGame({ onBack }) {
         <TableLevelToast
           levelChange={state.tableLevelChanged}
           onDismiss={handleDismissTableToast}
+        />
+      )}
+
+      {state.pendingTableUpgrade && (
+        <TableUpgradeModal
+          pendingUpgrade={state.pendingTableUpgrade}
+          onAccept={handleAcceptUpgrade}
+          onDecline={handleDeclineUpgrade}
         />
       )}
 

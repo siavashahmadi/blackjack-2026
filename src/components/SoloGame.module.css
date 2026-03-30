@@ -20,6 +20,36 @@
   min-height: 0;
 }
 
+.feltWatermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: var(--text-primary);
+  opacity: 0.06;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 0;
+  animation: watermarkFadeIn 1.2s ease-out;
+}
+
+@keyframes watermarkFadeIn {
+  from { opacity: 0; }
+  to { opacity: 0.06; }
+}
+
+@media (max-width: 375px) {
+  .feltWatermark {
+    font-size: 36px;
+    letter-spacing: 4px;
+  }
+}
+
 .controlsArea {
   flex-shrink: 0;
   min-height: 68px;
