@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { formatMoney } from '../utils/formatters'
 import styles from './DebtTracker.module.css'
 
@@ -32,8 +32,8 @@ function DebtTracker({ bankrollHistory, peakBankroll, lowestBankroll, handsPlaye
   const chartData = useMemo(() => {
     if (bankrollHistory.length < 2) return null
 
-    const dataMin = Math.min(...bankrollHistory)
-    const dataMax = Math.max(...bankrollHistory)
+    const dataMin = bankrollHistory.reduce((min, v) => v < min ? v : min, bankrollHistory[0])
+    const dataMax = bankrollHistory.reduce((max, v) => v > max ? v : max, bankrollHistory[0])
 
     // Ensure $0 is always visible, with padding
     let yMin = Math.min(dataMin, 0)
@@ -224,4 +224,4 @@ function DebtTracker({ bankrollHistory, peakBankroll, lowestBankroll, handsPlaye
   )
 }
 
-export default DebtTracker
+export default memo(DebtTracker)

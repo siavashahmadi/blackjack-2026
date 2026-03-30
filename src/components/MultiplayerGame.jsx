@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import audioManager from '../utils/audioManager'
+import { sumChipStack } from '../utils/chipUtils'
 import { useMultiplayerSound } from '../hooks/useMultiplayerSound'
+import { useChipInteraction } from '../hooks/useChipInteraction'
 import {
   MP_ADD_CHIP, MP_UNDO_CHIP, MP_CLEAR_CHIPS, MP_SELECT_CHIP,
   MP_ALL_IN, MP_TOGGLE_ASSET_MENU, MP_TOGGLE_MUTE,
@@ -21,7 +22,13 @@ import DebtTracker from './DebtTracker'
 import { STARTING_BANKROLL } from '../constants/gameConfig'
 import styles from './MultiplayerGame.module.css'
 
-let flyingChipId = 0
+const mpChipActions = {
+  shouldBlock: (s) => s.betSubmitted,
+  shouldBlockUndo: (s) => s.betSubmitted,
+  selectChip: (dispatch, value) => dispatch({ type: MP_SELECT_CHIP, value }),
+  addChip: (dispatch, value) => dispatch({ type: MP_ADD_CHIP, value }),
+  undo: (dispatch) => dispatch({ type: MP_UNDO_CHIP }),
+}
 
 function MultiplayerGame({ state, send, dispatch, onLeave }) {
   const stateRef = useRef(state)
@@ -29,9 +36,11 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
 
   useMultiplayerSound(state)
 
-  const [flyingChips, setFlyingChips] = useState([])
   const [showDebtTracker, setShowDebtTracker] = useState(false)
   const circleRef = useRef(null)
+  const { flyingChips, handleChipTap, handleUndo, removeFlyingChip } = useChipInteraction(
+    dispatch, mpChipActions, stateRef, circleRef
+  )
 
   // Local player data from server state
   const localPlayer = state.playerStates[state.playerId] || {}
@@ -52,44 +61,6 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
   // Server already hides the hole card by sending rank:'?' — don't double-hide
   const hideHoleCard = false
 
-  // Chip stacking handlers (client-side UX, identical to solo)
-  const handleChipTap = useCallback((value, event) => {
-    if (stateRef.current.betSubmitted) return
-    navigator.vibrate?.(10)
-    const isFirst = stateRef.current.chipStack.length === 0
-    audioManager.play(isFirst ? 'chip_place' : 'chip_stack')
-    dispatch({ type: MP_SELECT_CHIP, value })
-    dispatch({ type: MP_ADD_CHIP, value })
-
-    if (event?.target && circleRef.current) {
-      const from = event.target.getBoundingClientRect()
-      const to = circleRef.current.getBoundingClientRect()
-      const id = ++flyingChipId
-      setFlyingChips(prev => [...prev, {
-        id, value,
-        from: { x: from.left + from.width / 2 - 18, y: from.top + from.height / 2 - 18 },
-        to: { x: to.left + to.width / 2 - 18, y: to.top + to.height / 2 - 18 },
-      }])
-    }
-  }, [dispatch])
-
-  const handleUndo = useCallback(() => {
-    if (stateRef.current.betSubmitted) return
-    const { chipStack } = stateRef.current
-    if (chipStack.length === 0) return
-    dispatch({ type: MP_UNDO_CHIP })
-
-    if (circleRef.current) {
-      const circleRect = circleRef.current.getBoundingClientRect()
-      const from = { x: circleRect.left + circleRect.width / 2 - 18, y: circleRect.top + circleRect.height / 2 - 18 }
-      const to = { x: from.x, y: from.y + 200 }
-      const id = ++flyingChipId
-      setFlyingChips(prev => [...prev, {
-        id, value: chipStack[chipStack.length - 1], from, to,
-      }])
-    }
-  }, [dispatch])
-
   const handleClear = useCallback(() => dispatch({ type: MP_CLEAR_CHIPS }), [dispatch])
   const handleAllIn = useCallback(() => dispatch({ type: MP_ALL_IN }), [dispatch])
   const handleToggleAssetMenu = useCallback(() => dispatch({ type: MP_TOGGLE_ASSET_MENU }), [dispatch])
@@ -98,7 +69,7 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
 
   // Submit bet to server (equivalent of "DEAL" in solo)
   const handlePlaceBet = useCallback(() => {
-    const total = stateRef.current.chipStack.reduce((sum, v) => sum + v, 0)
+    const total = sumChipStack(stateRef.current.chipStack)
     send({ type: 'place_bet', amount: total })
   }, [send])
 
@@ -141,12 +112,8 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
     send({ type: 'view_stats' })
   }, [send])
 
-  const removeFlyingChip = useCallback((id) => {
-    setFlyingChips(prev => prev.filter(c => c.id !== id))
-  }, [])
-
   const currentBetTotal = useMemo(() =>
-    state.chipStack.reduce((sum, v) => sum + v, 0),
+    sumChipStack(state.chipStack),
     [state.chipStack]
   )
 

@@ -1,8 +1,9 @@
 import { useReducer, useRef, useCallback, useMemo, useState, useEffect } from 'react'
-import audioManager from '../utils/audioManager'
 import { gameReducer } from '../reducer/gameReducer'
 import { createInitialState } from '../reducer/initialState'
 import { createDeck, shuffle } from '../utils/cardUtils'
+import { sumChipStack } from '../utils/chipUtils'
+import { drawFromDeck } from '../utils/deckUtils'
 import { TABLE_LEVELS } from '../constants/tableLevels'
 import {
   addChip, selectChip, deal, hit, doubleDown, split, betAsset, removeAsset,
@@ -17,6 +18,8 @@ import { useLoanShark } from '../hooks/useLoanShark'
 import { useAchievements } from '../hooks/useAchievements'
 import { useSound } from '../hooks/useSound'
 import { useSessionPersistence } from '../hooks/useSessionPersistence'
+import { useChipInteraction } from '../hooks/useChipInteraction'
+import { useAssetConfirmation } from '../hooks/useAssetConfirmation'
 import Header from './Header'
 import BankrollDisplay from './BankrollDisplay'
 import DealerArea from './DealerArea'
@@ -33,7 +36,13 @@ import TableLevelToast from './TableLevelToast'
 import FlyingChip from './FlyingChip'
 import styles from './SoloGame.module.css'
 
-let flyingChipId = 0
+const soloChipActions = {
+  shouldBlock: (s) => s.phase !== 'betting' || (s.bankroll < TABLE_LEVELS[s.tableLevel].minBet && !s.inDebtMode),
+  shouldBlockUndo: () => false,
+  selectChip: (dispatch, value) => dispatch(selectChip(value)),
+  addChip: (dispatch, value) => dispatch(addChip(value)),
+  undo: (dispatch) => dispatch({ type: UNDO_CHIP }),
+}
 
 function SoloGame({ onBack }) {
   const [state, dispatch] = useReducer(gameReducer, null, () => ({
@@ -43,9 +52,10 @@ function SoloGame({ onBack }) {
   const stateRef = useRef(state)
   stateRef.current = state
 
-  // Flying chip animations (purely visual — fire and forget)
-  const [flyingChips, setFlyingChips] = useState([])
   const circleRef = useRef(null)
+  const { flyingChips, handleChipTap, handleUndo, removeFlyingChip } = useChipInteraction(
+    dispatch, soloChipActions, stateRef, circleRef
+  )
 
   // Dealer turn automation
   useDealerTurn(state, dispatch)
@@ -66,76 +76,17 @@ function SoloGame({ onBack }) {
     dispatch({ type: DISMISS_TABLE_TOAST })
   }, [])
 
-  // --- Handlers (stable via useCallback — dispatch and stateRef never change identity) ---
-  const handleChipTap = useCallback((value, event) => {
-    const s = stateRef.current
-    if (s.phase !== 'betting') return
-    const tapMinBet = TABLE_LEVELS[s.tableLevel].minBet
-    if (s.bankroll < tapMinBet && !s.inDebtMode) return
-    // Haptic + sound immediately on tap for zero-latency feedback
-    navigator.vibrate?.(10)
-    const isFirst = stateRef.current.chipStack.length === 0
-    audioManager.play(isFirst ? 'chip_place' : 'chip_stack')
-    dispatch(selectChip(value))
-    dispatch(addChip(value))
-
-    // Spawn flying chip animation (visual only)
-    if (event?.target && circleRef.current) {
-      const from = event.target.getBoundingClientRect()
-      const to = circleRef.current.getBoundingClientRect()
-      const id = ++flyingChipId
-      setFlyingChips(prev => [...prev, {
-        id,
-        value,
-        from: { x: from.left + from.width / 2 - 18, y: from.top + from.height / 2 - 18 },
-        to: { x: to.left + to.width / 2 - 18, y: to.top + to.height / 2 - 18 },
-      }])
-    }
-  }, [])
-
-  const handleUndo = useCallback((event) => {
-    const chipStack = stateRef.current.chipStack
-    if (chipStack.length === 0) return
-    const removedValue = chipStack[chipStack.length - 1]
-
-    dispatch({ type: UNDO_CHIP })
-
-    // Spawn flying chip from circle to tray (visual only — reverse animation)
-    if (circleRef.current) {
-      const circleRect = circleRef.current.getBoundingClientRect()
-      const from = { x: circleRect.left + circleRect.width / 2 - 18, y: circleRect.top + circleRect.height / 2 - 18 }
-      // Target: approximate tray center (below the circle)
-      const to = { x: from.x, y: from.y + 200 }
-      const id = ++flyingChipId
-      setFlyingChips(prev => [...prev, {
-        id,
-        value: removedValue,
-        from,
-        to,
-        reverse: true,
-      }])
-    }
-  }, [])
-
   const handleClear = useCallback(() => dispatch({ type: CLEAR_CHIPS }), [])
   const handleAllIn = useCallback(() => dispatch({ type: ALL_IN }), [])
 
   const handleDeal = useCallback(() => {
-    if (stateRef.current.deck.length < 4) {
-      const freshDeck = shuffle(createDeck())
-      dispatch(deal(freshDeck.slice(0, 4), freshDeck.slice(4)))
-    } else {
-      dispatch(deal(stateRef.current.deck.slice(0, 4)))
-    }
+    const { cards, deck, reshuffled } = drawFromDeck(stateRef.current.deck, 4)
+    dispatch(deal(cards, reshuffled ? deck : undefined))
   }, [])
 
   const handleHit = useCallback(() => {
-    if (stateRef.current.deck.length < 1) {
-      dispatch(hit(null, shuffle(createDeck())))
-    } else {
-      const [card] = stateRef.current.deck.slice(0, 1)
-      dispatch(hit(card))
-    }
+    const { cards, reshuffled, deck } = drawFromDeck(stateRef.current.deck, 1)
+    dispatch(reshuffled ? hit(null, [cards[0], ...deck]) : hit(cards[0]))
   }, [])
 
   const handleStand = useCallback(() => dispatch({ type: STAND }), [])
@@ -150,12 +101,8 @@ function SoloGame({ onBack }) {
       setPendingLoanAction({ type: 'double' })
       return
     }
-    if (s.deck.length < 1) {
-      dispatch(doubleDown(null, shuffle(createDeck())))
-    } else {
-      const [card] = s.deck.slice(0, 1)
-      dispatch(doubleDown(card))
-    }
+    const { cards, reshuffled, deck } = drawFromDeck(s.deck, 1)
+    dispatch(reshuffled ? doubleDown(null, [cards[0], ...deck]) : doubleDown(cards[0]))
   }, [])
 
   const handleSplit = useCallback(() => {
@@ -165,31 +112,19 @@ function SoloGame({ onBack }) {
       setPendingLoanAction({ type: 'split' })
       return
     }
-    if (s.deck.length < 2) {
-      dispatch(split(null, shuffle(createDeck())))
-    } else {
-      const cards = s.deck.slice(0, 2)
-      dispatch(split(cards))
-    }
+    const { cards, reshuffled, deck } = drawFromDeck(s.deck, 2)
+    dispatch(reshuffled ? split(null, [cards[0], cards[1], ...deck]) : split(cards))
   }, [])
 
   const handleConfirmLoan = useCallback(() => {
-    // Snapshot deck before any dispatch — stateRef won't update until re-render
     const deck = stateRef.current.deck
     dispatch(takeLoan())
-    // useReducer processes dispatches sequentially — inDebtMode is true for the next action
     if (pendingLoanAction?.type === 'double') {
-      if (deck.length < 1) {
-        dispatch(doubleDown(null, shuffle(createDeck())))
-      } else {
-        dispatch(doubleDown(deck[0]))
-      }
+      const { cards, reshuffled, deck: remaining } = drawFromDeck(deck, 1)
+      dispatch(reshuffled ? doubleDown(null, [cards[0], ...remaining]) : doubleDown(cards[0]))
     } else if (pendingLoanAction?.type === 'split') {
-      if (deck.length < 2) {
-        dispatch(split(null, shuffle(createDeck())))
-      } else {
-        dispatch(split(deck.slice(0, 2)))
-      }
+      const { cards, reshuffled, deck: remaining } = drawFromDeck(deck, 2)
+      dispatch(reshuffled ? split(null, [cards[0], cards[1], ...remaining]) : split(cards))
     }
     setPendingLoanAction(null)
   }, [pendingLoanAction])
@@ -210,26 +145,8 @@ function SoloGame({ onBack }) {
     onBack()
   }, [onBack])
 
-  // Asset betting with confirmation for high-value assets
-  const [pendingAssetConfirm, setPendingAssetConfirm] = useState(null)
-
-  const handleBetAsset = useCallback((asset) => {
-    // House and soul require confirmation
-    if (asset.id === 'house' || asset.id === 'soul') {
-      setPendingAssetConfirm(asset)
-    } else {
-      dispatch(betAsset(asset))
-    }
-  }, [])
-
-  const handleConfirmAsset = useCallback(() => {
-    if (pendingAssetConfirm) {
-      dispatch(betAsset(pendingAssetConfirm))
-      setPendingAssetConfirm(null)
-    }
-  }, [pendingAssetConfirm])
-
-  const handleCancelAsset = useCallback(() => setPendingAssetConfirm(null), [])
+  const { pendingAssetConfirm, handleBetAsset, handleConfirmAsset, handleCancelAsset } =
+    useAssetConfirmation(dispatch, betAsset)
 
   const handleRemoveAsset = useCallback((assetId) => dispatch(removeAsset(assetId)), [])
   const handleToggleAssetMenu = useCallback(() => dispatch({ type: TOGGLE_ASSET_MENU }), [])
@@ -241,13 +158,9 @@ function SoloGame({ onBack }) {
   const handleToggleMute = useCallback(() => dispatch({ type: TOGGLE_MUTE }), [])
   const handleToggleNotifications = useCallback(() => dispatch({ type: TOGGLE_NOTIFICATIONS }), [])
 
-  const removeFlyingChip = useCallback((id) => {
-    setFlyingChips(prev => prev.filter(c => c.id !== id))
-  }, [])
-
   // --- Derived state ---
   const currentBetTotal = useMemo(() =>
-    state.chipStack.reduce((sum, v) => sum + v, 0),
+    sumChipStack(state.chipStack),
     [state.chipStack]
   )
 
