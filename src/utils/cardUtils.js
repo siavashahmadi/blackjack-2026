@@ -92,3 +92,29 @@ export function isSoft(hand) {
 export function isBlackjack(hand) {
   return hand.length === 2 && handValue(hand) === 21
 }
+
+/**
+ * Returns true if the result represents a player win.
+ */
+export function isWinResult(result) {
+  return result === 'win' || result === 'dealerBust' || result === 'blackjack'
+}
+
+/**
+ * Returns true if the result represents a player loss.
+ */
+export function isLossResult(result) {
+  return result === 'lose' || result === 'bust'
+}
+
+/**
+ * Determines the outcome of a player hand vs dealer hand.
+ */
+export function determineOutcome(playerCards, dealerHand) {
+  const playerVal = handValue(playerCards)
+  const dealerVal = handValue(dealerHand)
+  if (dealerVal > 21) return 'dealerBust'
+  if (dealerVal > playerVal) return 'lose'
+  if (playerVal > dealerVal) return 'win'
+  return 'push'
+}

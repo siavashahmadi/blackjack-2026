@@ -12,9 +12,3 @@ export function formatMoney(amount) {
   return moneyFormatter.format(amount)
 }
 
-/**
- * Returns a random element from an array.
- */
-export function pickRandom(array) {
-  return array[Math.floor(Math.random() * array.length)]
-}

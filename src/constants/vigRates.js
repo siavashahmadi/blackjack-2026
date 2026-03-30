@@ -3,7 +3,7 @@
  * When a player bets with borrowed money, the casino takes a percentage off the top.
  * Tiers ordered from least negative bankroll to most negative.
  */
-export const VIG_TIERS = [
+const VIG_TIERS = [
   { minBankroll: 0,          rate: 0.02 },   // >= $0: 2%
   { minBankroll: -10000,     rate: 0.04 },   // $0 to -$10K: 4%
   { minBankroll: -50000,     rate: 0.07 },   // -$10K to -$50K: 7%
