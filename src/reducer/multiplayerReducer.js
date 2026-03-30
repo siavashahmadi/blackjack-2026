@@ -1,6 +1,6 @@
 import { multiplayerInitialState } from './multiplayerInitialState'
 import { MIN_BET } from '../constants/gameConfig'
-import { CHIPS } from '../constants/chips'
+import { decomposeIntoChips, sumChipStack } from '../utils/chipUtils'
 
 const NEXT_ROUND_DELAY_MS = 5000
 
@@ -28,7 +28,7 @@ function applyServerState(state, serverState) {
 
   return {
     ...state,
-    phase: serverState.phase === 'dealer_turn' ? 'dealer_turn' : serverState.phase,
+    phase: serverState.phase ?? state.phase,
     round: serverState.round ?? state.round,
     dealerHand: serverState.dealer_hand ?? state.dealerHand,
     dealerValue: serverState.dealer_value ?? state.dealerValue,
@@ -49,20 +49,6 @@ function extractPlayersInfo(playerId, players) {
 function getLocalBankroll(state) {
   const localPlayer = state.playerStates[state.playerId]
   return localPlayer?.bankroll ?? 0
-}
-
-/** Decompose an amount into the largest chips possible (greedy) */
-function decomposeIntoChips(amount) {
-  const chipValues = CHIPS.map(c => c.value).sort((a, b) => b - a)
-  const result = []
-  let remaining = amount
-  for (const value of chipValues) {
-    while (remaining >= value) {
-      result.push(value)
-      remaining -= value
-    }
-  }
-  return result
 }
 
 // --- Reducer ---
@@ -94,7 +80,7 @@ export function multiplayerReducer(state, action) {
       const localPlayer = state.playerStates[state.playerId] || {}
       const inDebtMode = localPlayer.in_debt_mode || false
       if (bankroll <= 0 && !inDebtMode) return state
-      const newTotal = state.chipStack.reduce((sum, v) => sum + v, 0) + action.value
+      const newTotal = sumChipStack(state.chipStack) + action.value
       if (newTotal > bankroll && !inDebtMode) return state
       return {
         ...state,
@@ -198,6 +184,9 @@ export function multiplayerReducer(state, action) {
     }
 
     case 'SERVER_ASSET_BET':
+      return applyServerState(state, action.payload.state)
+
+    case 'SERVER_LOAN_TAKEN':
       return applyServerState(state, action.payload.state)
 
     case 'SERVER_CARDS_DEALT':

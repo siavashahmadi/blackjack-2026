@@ -8,33 +8,14 @@ import {
   LOAD_HIGHEST_DEBT,
 } from './actions'
 import { createInitialState, createHandObject } from './initialState'
-import { CHIPS } from '../constants/chips'
-import { BLACKJACK_PAYOUT, RESHUFFLE_THRESHOLD } from '../constants/gameConfig'
+import { BLACKJACK_PAYOUT, RESHUFFLE_THRESHOLD, MAX_SPLIT_HANDS } from '../constants/gameConfig'
 import { getTableLevel, getTableChips, TABLE_LEVELS } from '../constants/tableLevels'
-import { cardValue, handValue, isBlackjack } from '../utils/cardUtils'
+import { handValue, isBlackjack, isWinResult, isLossResult } from '../utils/cardUtils'
+import { decomposeIntoChips, sumChipStack } from '../utils/chipUtils'
 import { getVigRate } from '../constants/vigRates'
 import { ASSETS } from '../constants/assets'
 
-// Chip values sorted descending for greedy decomposition
-const CHIP_VALUES_DESC = [...CHIPS].map(c => c.value).sort((a, b) => b - a)
-
-function sumChipStack(chipStack) {
-  return chipStack.reduce((sum, v) => sum + v, 0)
-}
-
-function decomposeIntoChips(amount) {
-  const chips = []
-  let remaining = amount
-  for (const value of CHIP_VALUES_DESC) {
-    while (remaining >= value) {
-      chips.push(value)
-      remaining -= value
-    }
-  }
-  return chips
-}
-
-const MAX_SPLIT_HANDS = 4
+const MAX_BANKROLL_HISTORY = 500
 
 // --- playerHands helpers ---
 
@@ -121,12 +102,13 @@ export function gameReducer(state, action) {
 
     case UNDO_CHIP: {
       if (state.phase !== 'betting' || state.chipStack.length === 0) return state
-      return { ...state, chipStack: state.chipStack.slice(0, -1) }
+      const newStack = state.chipStack.slice(0, -1)
+      return { ...state, chipStack: newStack, isAllIn: newStack.length === 0 ? false : state.isAllIn }
     }
 
     case CLEAR_CHIPS: {
       if (state.phase !== 'betting') return state
-      return { ...state, chipStack: [] }
+      return { ...state, chipStack: [], isAllIn: false }
     }
 
     case SELECT_CHIP: {
@@ -284,6 +266,8 @@ export function gameReducer(state, action) {
       const hand = activeHand(state)
       if (!hand || hand.cards.length !== 2) return state
       if (hand.isSplitAces) return state
+      // Block doubling a pure asset bet — there are no chips to double
+      if (hand.bet === 0) return state
       // Debt gate: block doubling when it would push bankroll negative without debt mode
       if (state.bankroll - hand.bet < 0 && !state.inDebtMode) return state
 
@@ -345,6 +329,8 @@ export function gameReducer(state, action) {
       // Cannot re-split aces
       if (splitHand.isSplitAces) return state
 
+      // Block splitting a pure asset bet — there are no chips to match for the second hand
+      if (splitHand.bet === 0) return state
       // Debt gate: block split when additional bet would go negative without debt mode
       if (state.bankroll - splitHand.bet < 0 && !state.inDebtMode) return state
 
@@ -493,8 +479,8 @@ export function gameReducer(state, action) {
       }
 
       const aggregateResult = determineAggregateResult(outcomes)
-      const isWin = aggregateResult === 'win' || aggregateResult === 'dealerBust' || aggregateResult === 'blackjack'
-      const isLoss = aggregateResult === 'lose' || aggregateResult === 'bust'
+      const isWin = isWinResult(aggregateResult)
+      const isLoss = isLossResult(aggregateResult)
       const isMixed = aggregateResult === 'mixed'
 
       // Table level progression (dynamic — based on current bankroll)
@@ -533,7 +519,9 @@ export function gameReducer(state, action) {
         totalLost: totalDelta < 0 ? state.totalLost + Math.abs(totalDelta) : state.totalLost,
         peakBankroll: Math.max(state.peakBankroll, newBankroll),
         lowestBankroll: Math.min(state.lowestBankroll, newBankroll),
-        bankrollHistory: [...state.bankrollHistory, newBankroll],
+        bankrollHistory: state.bankrollHistory.length >= MAX_BANKROLL_HISTORY
+          ? [...state.bankrollHistory.slice(-(MAX_BANKROLL_HISTORY - 1)), newBankroll]
+          : [...state.bankrollHistory, newBankroll],
       }
     }
 

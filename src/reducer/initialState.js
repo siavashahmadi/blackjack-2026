@@ -83,4 +83,3 @@ export function createHandObject(cards = [], bet = 0) {
   }
 }
 
-export const initialState = createInitialState()
