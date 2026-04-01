@@ -7,7 +7,7 @@ const RECONNECT_BASE_DELAY = 1000
 // Only queue messages that are safe to replay after reconnect.
 // Game-action messages (hit, stand, double_down, split, place_bet, etc.)
 // must NOT be queued — replaying them after reconnect causes duplicate actions.
-const QUEUEABLE_TYPES = new Set(['create_room', 'join_room', 'reconnect'])
+const QUEUEABLE_TYPES = new Set(['create_room', 'join_room'])
 
 /**
  * Manages a WebSocket connection to the multiplayer server.
@@ -49,6 +49,7 @@ export function useWebSocket(dispatch) {
     const ws = new WebSocket(WS_URL)
 
     ws.onopen = () => {
+      reconnectAttempts = 0
       dispatchRef.current({ type: 'WS_CONNECTED' })
       resetHeartbeatTimeout()
 
@@ -149,6 +150,7 @@ export function useWebSocket(dispatch) {
           sessionStorage.removeItem('mp_player_id')
           sessionStorage.removeItem('mp_room_code')
           sessionStorage.removeItem('mp_session_token')
+          dispatchRef.current({ type: 'SERVER_ERROR', payload: { message: 'Connection lost. Please refresh to reconnect.' } })
         }
       }
     }
@@ -185,6 +187,7 @@ export function useWebSocket(dispatch) {
     sessionStorage.removeItem('mp_player_id')
     sessionStorage.removeItem('mp_room_code')
     sessionStorage.removeItem('mp_session_token')
+    dispatchRef.current({ type: 'WS_DISCONNECTED' })
     if (activeWs) {
       activeWs.close()
       activeWs = null
