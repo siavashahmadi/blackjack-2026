@@ -2,6 +2,7 @@ import {
   ADD_CHIP, UNDO_CHIP, CLEAR_CHIPS, SELECT_CHIP, ALL_IN,
   DEAL, BET_ASSET, REMOVE_ASSET, HIT, STAND, DOUBLE_DOWN, SPLIT, DEALER_DRAW,
   RESOLVE_HAND, NEW_ROUND, RESET_GAME, TAKE_LOAN, DISMISS_TABLE_TOAST,
+  ACCEPT_TABLE_UPGRADE, DECLINE_TABLE_UPGRADE,
   TOGGLE_ASSET_MENU, TOGGLE_ACHIEVEMENTS,
   DISMISS_ACHIEVEMENT, DISMISS_LOAN_SHARK, UNLOCK_ACHIEVEMENT, LOAD_ACHIEVEMENTS,
   TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, TOGGLE_DEBT_TRACKER, SET_DEALER_MESSAGE, SET_LOAN_SHARK_MESSAGE,
@@ -122,8 +123,8 @@ export function gameReducer(state, action) {
       if (state.bankroll < allInMinBet && !state.inDebtMode) return state
       let allInAmount
       if (state.inDebtMode) {
-        // "HAIL MARY" — bet the table's max bet for dramatic effect
-        allInAmount = TABLE_LEVELS[state.tableLevel].maxBet
+        // "HAIL MARY" — bet the full debt amount, luring the player into thinking they can win it all back
+        allInAmount = Math.abs(state.bankroll)
       } else {
         allInAmount = state.bankroll
       }
@@ -277,7 +278,6 @@ export function gameReducer(state, action) {
       // Vig on the additional bet (same amount as original hand bet)
       const additionalBet = hand.bet
       const totalCommitted = state.playerHands
-        .filter((_, i) => i !== state.activeHandIndex)
         .reduce((sum, h) => sum + h.bet, 0)
       const effectiveBankroll = Math.max(0, state.bankroll - totalCommitted)
       const borrowedAmount = Math.max(0, additionalBet - effectiveBankroll)
@@ -346,7 +346,6 @@ export function gameReducer(state, action) {
 
       // Vig on the new hand's bet (hand2 is the additional bet)
       const totalCommitted = state.playerHands
-        .filter((_, i) => i !== state.activeHandIndex)
         .reduce((sum, h) => sum + h.bet, 0)
       const effectiveBankroll = Math.max(0, state.bankroll - totalCommitted)
       const borrowedAmount = Math.max(0, splitHand.bet - effectiveBankroll)
@@ -483,21 +482,39 @@ export function gameReducer(state, action) {
       const isLoss = isLossResult(aggregateResult)
       const isMixed = aggregateResult === 'mixed'
 
-      // Table level progression (dynamic — based on current bankroll)
-      const newTableLevel = getTableLevel(newBankroll)
+      // Table level progression
+      const computedLevel = getTableLevel(newBankroll)
+      let newTableLevel = state.tableLevel
+      let tableLevelChanged = null
+      let pendingTableUpgrade = state.pendingTableUpgrade
+      let declinedTableUpgrade = state.declinedTableUpgrade
+      let selectedChipValue = state.selectedChipValue
+
+      if (computedLevel !== state.tableLevel) {
+        if (computedLevel < state.tableLevel) {
+          // Downgrade: apply immediately
+          newTableLevel = computedLevel
+          tableLevelChanged = { from: state.tableLevel, to: computedLevel }
+          pendingTableUpgrade = null
+          declinedTableUpgrade = null
+          const downgradeChips = getTableChips(computedLevel, newBankroll)
+          const downgradeValues = downgradeChips.map(c => c.value)
+          selectedChipValue = downgradeValues.includes(selectedChipValue)
+            ? selectedChipValue : downgradeValues[0]
+        } else if (declinedTableUpgrade !== computedLevel) {
+          // Upgrade: show modal instead of auto-switching
+          pendingTableUpgrade = { from: state.tableLevel, to: computedLevel }
+        }
+      } else {
+        // Still at current level — clear declined if bankroll dropped below that threshold
+        if (declinedTableUpgrade !== null && computedLevel < declinedTableUpgrade) {
+          declinedTableUpgrade = null
+        }
+      }
 
       // Exit debt mode if bankroll recovered to >= minBet
       const resolveMinBet = TABLE_LEVELS[newTableLevel].minBet
       const newInDebtMode = state.inDebtMode && newBankroll < resolveMinBet
-      const tableLevelChanged = newTableLevel !== state.tableLevel
-        ? { from: state.tableLevel, to: newTableLevel }
-        : null
-      // Auto-correct selectedChipValue if it's not in the visible chip set (debt-aware)
-      const newTableChipObjects = getTableChips(newTableLevel, newBankroll)
-      const newTableChipValues = newTableChipObjects.map(c => c.value)
-      const selectedChipValue = newTableChipValues.includes(state.selectedChipValue)
-        ? state.selectedChipValue
-        : newTableChipValues[0]
 
       return {
         ...state,
@@ -511,6 +528,8 @@ export function gameReducer(state, action) {
         result: aggregateResult,
         tableLevel: newTableLevel,
         tableLevelChanged,
+        pendingTableUpgrade,
+        declinedTableUpgrade,
         selectedChipValue,
         handsPlayed: state.handsPlayed + 1,
         winStreak: isWin ? state.winStreak + 1 : (isLoss || isMixed ? 0 : state.winStreak),
@@ -553,6 +572,32 @@ export function gameReducer(state, action) {
 
     case DISMISS_TABLE_TOAST: {
       return { ...state, tableLevelChanged: null }
+    }
+
+    case ACCEPT_TABLE_UPGRADE: {
+      if (!state.pendingTableUpgrade) return state
+      const { from, to } = state.pendingTableUpgrade
+      const upgradeChips = getTableChips(to, state.bankroll)
+      const upgradeValues = upgradeChips.map(c => c.value)
+      const chipValue = upgradeValues.includes(state.selectedChipValue)
+        ? state.selectedChipValue : upgradeValues[0]
+      return {
+        ...state,
+        tableLevel: to,
+        tableLevelChanged: { from, to },
+        pendingTableUpgrade: null,
+        declinedTableUpgrade: null,
+        selectedChipValue: chipValue,
+      }
+    }
+
+    case DECLINE_TABLE_UPGRADE: {
+      if (!state.pendingTableUpgrade) return state
+      return {
+        ...state,
+        pendingTableUpgrade: null,
+        declinedTableUpgrade: state.pendingTableUpgrade.to,
+      }
     }
 
     case RESET_GAME: {

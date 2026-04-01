@@ -29,6 +29,8 @@ export const TOGGLE_NOTIFICATIONS = 'TOGGLE_NOTIFICATIONS'
 export const TOGGLE_DEBT_TRACKER = 'TOGGLE_DEBT_TRACKER'
 export const TAKE_LOAN = 'TAKE_LOAN'
 export const DISMISS_TABLE_TOAST = 'DISMISS_TABLE_TOAST'
+export const ACCEPT_TABLE_UPGRADE = 'ACCEPT_TABLE_UPGRADE'
+export const DECLINE_TABLE_UPGRADE = 'DECLINE_TABLE_UPGRADE'
 
 // Action creators for actions with payloads
 export const addChip = (value) => ({ type: ADD_CHIP, value })
