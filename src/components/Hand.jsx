@@ -27,13 +27,24 @@ const Hand = memo(function Hand({ cards = [], hideFirst = false, animate = true,
   // Track cards already rendered so only new cards get deal animations
   const knownCardsRef = useRef(new Set())
 
+  // Build ordered list of new card IDs so we can stagger only among new cards
   const newCardIds = useMemo(() => {
-    const ids = new Set()
+    const ids = []
     cards.forEach(c => {
-      if (!knownCardsRef.current.has(c.id)) ids.add(c.id)
+      if (!knownCardsRef.current.has(c.id)) ids.push(c.id)
     })
-    return ids
+    return new Set(ids)
   }, [cards])
+
+  // Map new card IDs to their stagger index (0-based among new cards only)
+  const newCardStagger = useMemo(() => {
+    const map = new Map()
+    let idx = 0
+    cards.forEach(c => {
+      if (newCardIds.has(c.id)) map.set(c.id, idx++)
+    })
+    return map
+  }, [cards, newCardIds])
 
   useEffect(() => {
     if (cards.length === 0) {
@@ -60,7 +71,7 @@ const Hand = memo(function Hand({ cards = [], hideFirst = false, animate = true,
             <Card
               card={card}
               faceDown={hideFirst && i === 0}
-              index={isNew ? i : 0}
+              index={isNew ? (newCardStagger.get(card.id) || 0) : 0}
               animate={animate && (isNew || isFlipping)}
               size={size}
               dealType={isFlipping ? 'flip' : dealType}
