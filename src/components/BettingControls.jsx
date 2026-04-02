@@ -15,6 +15,7 @@ function BettingControls({
   showAssetMenu,
   inDebtMode,
   tableLevel = 0,
+  trayRef,
   onChipTap,
   onUndo,
   onClear,
@@ -66,7 +67,7 @@ function BettingControls({
 
   return (
     <div className={styles.controls}>
-      <div className={styles.chipTrayWrapper}>
+      <div className={styles.chipTrayWrapper} ref={trayRef}>
         <ChipTray
           bankroll={bankroll}
           selectedChipValue={selectedChipValue}

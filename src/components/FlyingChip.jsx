@@ -11,9 +11,10 @@ function FlyingChip({ value, from, to, onDone, reverse }) {
     <div
       className={`${styles.chip} ${reverse ? styles.reverse : ''}`}
       style={{
-        '--chip-bg': chip.color,
+        '--chip-face': chip.color,
+        '--chip-rim': chip.rimColor || chip.color,
+        '--chip-spot': chip.spotColor || '#e8e4d8',
         '--chip-text': chip.textColor,
-        '--chip-border': `${chip.color}88`,
         '--fly-start-x': `${from.x}px`,
         '--fly-start-y': `${from.y}px`,
         '--fly-dx': `${dx}px`,
@@ -21,7 +22,7 @@ function FlyingChip({ value, from, to, onDone, reverse }) {
       }}
       onAnimationEnd={onDone}
     >
-      {chip.label}
+      <span className={styles.label}>{chip.label}</span>
     </div>
   )
 }

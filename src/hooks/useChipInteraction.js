@@ -3,7 +3,7 @@ import audioManager from '../utils/audioManager'
 
 let flyingChipId = 0
 
-export function useChipInteraction(dispatch, actions, stateRef, circleRef) {
+export function useChipInteraction(dispatch, actions, stateRef, circleRef, trayRef) {
   const [flyingChips, setFlyingChips] = useState([])
 
   const handleChipTap = useCallback((value, event) => {
@@ -39,13 +39,20 @@ export function useChipInteraction(dispatch, actions, stateRef, circleRef) {
     if (circleRef.current) {
       const circleRect = circleRef.current.getBoundingClientRect()
       const from = { x: circleRect.left + circleRect.width / 2 - 18, y: circleRect.top + circleRect.height / 2 - 18 }
-      const to = { x: from.x, y: from.y + 200 }
+      // Fly back toward tray if ref available, otherwise toward bottom-center of viewport
+      let to
+      if (trayRef?.current) {
+        const trayRect = trayRef.current.getBoundingClientRect()
+        to = { x: trayRect.left + trayRect.width / 2 - 18, y: trayRect.top + trayRect.height / 2 - 18 }
+      } else {
+        to = { x: from.x, y: from.y + 160 }
+      }
       const id = ++flyingChipId
       setFlyingChips(prev => [...prev, {
         id, value: removedValue, from, to, reverse: true,
       }])
     }
-  }, [dispatch, actions, stateRef, circleRef])
+  }, [dispatch, actions, stateRef, circleRef, trayRef])
 
   const removeFlyingChip = useCallback((id) => {
     setFlyingChips(prev => prev.filter(c => c.id !== id))

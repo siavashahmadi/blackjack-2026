@@ -7,7 +7,7 @@ import { formatMoney } from '../utils/formatters'
 import Chip from './Chip'
 import styles from './BettingCircle.module.css'
 
-const RESULT_ANIMATE_MS = 800
+const RESULT_ANIMATE_MS = 1000
 
 const BettingCircle = React.memo(forwardRef(function BettingCircle(
   { chipStack = [], bettedAssets = [], result, onUndo, onRemoveAsset, playerHands = [] },
@@ -18,6 +18,8 @@ const BettingCircle = React.memo(forwardRef(function BettingCircle(
   const [displayAssets, setDisplayAssets] = useState(bettedAssets)
   const [animatingOut, setAnimatingOut] = useState(false)
   const prevChipLenRef = useRef(chipStack.length)
+  // Track which chip index is "new" to animate only the landing chip
+  const [newChipIndex, setNewChipIndex] = useState(-1)
 
   useEffect(() => {
     const prevLen = prevChipLenRef.current
@@ -26,6 +28,7 @@ const BettingCircle = React.memo(forwardRef(function BettingCircle(
     if (prevLen > 0 && chipStack.length === 0 && result) {
       // Chips just cleared (RESOLVE_HAND) — keep displaying for animation
       setAnimatingOut(true)
+      setNewChipIndex(-1)
       const timer = setTimeout(() => {
         setDisplayChips([])
         setDisplayAssets([])
@@ -37,6 +40,12 @@ const BettingCircle = React.memo(forwardRef(function BettingCircle(
       setDisplayChips(chipStack)
       setDisplayAssets(bettedAssets)
       setAnimatingOut(false)
+      // Mark the newest chip for landing animation
+      if (chipStack.length > prevLen) {
+        setNewChipIndex(chipStack.length - 1)
+      } else {
+        setNewChipIndex(-1)
+      }
     }
   }, [chipStack, bettedAssets, result])
 
@@ -53,7 +62,7 @@ const BettingCircle = React.memo(forwardRef(function BettingCircle(
     }
   }, [displayChips, displayAssets])
 
-  const animClass = animatingOut
+  const animOutStyle = animatingOut
     ? (isWin ? styles.spreadOut : styles.sweepOut)
     : ''
 
@@ -67,17 +76,29 @@ const BettingCircle = React.memo(forwardRef(function BettingCircle(
         onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !isEmpty) onUndo() }}
       >
         {visibleChips.length > 0 && (
-          <div className={`${styles.chipStack} ${animClass}`}>
+          <div className={styles.chipStack}>
             {visibleChips.map((value, i) => {
               const chip = CHIP_MAP[value] || CHIP_MAP[25]
+              // Map newChipIndex into visible range
+              const visibleStart = displayChips.length - visibleChips.length
+              const isNew = newChipIndex >= 0 && i === newChipIndex - visibleStart
+              // Stagger result animations per chip (top chips leave first for sweep, bottom first for spread)
+              const staggerDelay = animatingOut
+                ? `${(isWin ? i : visibleChips.length - 1 - i) * 40}ms`
+                : undefined
+              const chipClasses = [
+                styles.stackedChip,
+                isNew ? styles.chipLanding : '',
+                animOutStyle,
+              ].filter(Boolean).join(' ')
               return (
                 <div
                   key={`${i}-${value}`}
-                  className={styles.stackedChip}
-                  style={{
-                    transform: `translate(-50%, -50%) translate(${i}px, ${-i * 3}px)`,
-                    zIndex: i,
-                  }}
+                  className={chipClasses}
+                  style={isNew
+                    ? { '--land-x': `${i}px`, '--land-y': `${-i * 3}px`, zIndex: i }
+                    : { transform: `translate(-50%, -50%) translate(${i}px, ${-i * 3}px)`, zIndex: i, animationDelay: staggerDelay }
+                  }
                 >
                   <Chip
                     label={chip.label}
@@ -94,7 +115,7 @@ const BettingCircle = React.memo(forwardRef(function BettingCircle(
           </div>
         )}
         {displayAssets.length > 0 && (
-          <div className={`${styles.assetChips} ${animClass}`}>
+          <div className={`${styles.assetChips} ${animOutStyle}`}>
             {displayAssets.map((asset, i) => {
               const baseOffset = visibleChips.length
               return (
