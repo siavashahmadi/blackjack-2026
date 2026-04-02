@@ -3,8 +3,8 @@ import { CHIP_MAP } from './chips'
 export const TABLE_LEVELS = [
   {
     id: 'felt',
-    name: 'The Felt',
-    subtitle: 'THE FELT',
+    name: 'Cherokee Casino',
+    subtitle: 'THE CHEROKEE',
     unlockAt: 0,
     minBet: 25,
     maxBet: 5000,
