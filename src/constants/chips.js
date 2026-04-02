@@ -1,4 +1,4 @@
-// All chip definitions (full catalog)
+// All chip definitions (full catalog) — pastel palette, visually distinct
 export const CHIPS = [
   // 25 - Punchy Coral Rose
   { value: 25, label: '25', color: '#FF8B8B', rimColor: '#E06B6B', spotColor: '#FFFFFF', textColor: '#7A2E2E' },
@@ -10,16 +10,16 @@ export const CHIPS = [
   { value: 1000, label: '1K', color: '#FFB366', rimColor: '#DF9346', spotColor: '#FFFFFF', textColor: '#7D3D0D' },
   // 5K - Neon Seafoam
   { value: 5000, label: '5K', color: '#7FFFD4', rimColor: '#5FDFB4', spotColor: '#FFFFFF', textColor: '#0D5D4D' },
-  // 25K - Bright Pearl White
-  { value: 25000, label: '25K', color: '#F8F9FA', rimColor: '#D8D9DA', spotColor: '#7AB5E6', textColor: '#334155' },
-  // 100K - Gold Metallic
-  { value: 100000, label: '100K', color: '#DAA520', rimColor: '#B8860B', spotColor: '#FFF8DC', textColor: '#3D2B00' },
-  // 500K - Platinum Silver
-  { value: 500000, label: '500K', color: '#C0C0C0', rimColor: '#A0A0A0', spotColor: '#E8E8E8', textColor: '#2D2D2D' },
-  // 1M - Royal Purple
-  { value: 1000000, label: '1M', color: '#8E24AA', rimColor: '#6A1B9A', spotColor: '#E1BEE7', textColor: '#FFFFFF' },
-  // 10M - Obsidian Black (THE ULTIMATE CHIP)
-  { value: 10000000, label: '10M', color: '#1a1a1a', rimColor: '#0a0a0a', spotColor: '#cc3333', textColor: '#cc3333' },
+  // 25K - Pastel Cream
+  { value: 25000, label: '25K', color: '#F0E8D8', rimColor: '#D4CCC0', spotColor: '#A0C8F0', textColor: '#3A3530' },
+  // 100K - Pastel Gold
+  { value: 100000, label: '100K', color: '#F0D890', rimColor: '#D4BC74', spotColor: '#FFFFF0', textColor: '#5A4A10' },
+  // 500K - Pastel Steel
+  { value: 500000, label: '500K', color: '#C8D0DC', rimColor: '#ACB4C0', spotColor: '#E8ECF0', textColor: '#2D3540' },
+  // 1M - Pastel Lilac
+  { value: 1000000, label: '1M', color: '#D0A8E0', rimColor: '#B48CC4', spotColor: '#F0E0F8', textColor: '#3A1850' },
+  // 10M - Pastel Charcoal
+  { value: 10000000, label: '10M', color: '#484050', rimColor: '#343040', spotColor: '#E8A0A0', textColor: '#E8A0A0' },
 ]
 
 // Chip lookup by value for fast access

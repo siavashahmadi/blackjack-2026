@@ -1,4 +1,4 @@
-import { memo, useRef, useMemo, useEffect } from 'react'
+import { memo, useRef, useEffect } from 'react'
 import Card from './Card'
 import styles from './Hand.module.css'
 
@@ -27,24 +27,18 @@ const Hand = memo(function Hand({ cards = [], hideFirst = false, animate = true,
   // Track cards already rendered so only new cards get deal animations
   const knownCardsRef = useRef(new Set())
 
-  // Build ordered list of new card IDs so we can stagger only among new cards
-  const newCardIds = useMemo(() => {
-    const ids = []
-    cards.forEach(c => {
-      if (!knownCardsRef.current.has(c.id)) ids.push(c.id)
-    })
-    return new Set(ids)
-  }, [cards])
-
-  // Map new card IDs to their stagger index (0-based among new cards only)
-  const newCardStagger = useMemo(() => {
-    const map = new Map()
-    let idx = 0
-    cards.forEach(c => {
-      if (newCardIds.has(c.id)) map.set(c.id, idx++)
-    })
-    return map
-  }, [cards, newCardIds])
+  // Compute which cards are new directly from the ref each render.
+  // Cannot use useMemo here — the ref updates via useEffect after render,
+  // but useMemo would return a stale cached result if cards ref is unchanged.
+  const newCardIds = new Set()
+  const newCardStagger = new Map()
+  let staggerIdx = 0
+  cards.forEach(c => {
+    if (!knownCardsRef.current.has(c.id)) {
+      newCardIds.add(c.id)
+      newCardStagger.set(c.id, staggerIdx++)
+    }
+  })
 
   useEffect(() => {
     if (cards.length === 0) {

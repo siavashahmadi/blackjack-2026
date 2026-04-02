@@ -18,6 +18,7 @@
   gap: 2px;
   padding: 0 16px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .feltWatermark {

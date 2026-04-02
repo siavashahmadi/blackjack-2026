@@ -71,7 +71,7 @@ function DealerArea({ hand, phase, hideHoleCard, dealerMessage, deckLength, deal
             <Hand
               cards={hand}
               hideFirst={hideHoleCard}
-              dealType={phase === 'dealerTurn' ? 'dealerDraw' : 'deal'}
+              dealType="deal"
               flipIndex={flipHoleCard ? 0 : -1}
             />
           ) : (
