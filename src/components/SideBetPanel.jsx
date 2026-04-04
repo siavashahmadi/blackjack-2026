@@ -1,21 +1,47 @@
-import React from 'react'
+import React, { useRef, useCallback } from 'react'
 import { SIDE_BET_DEFINITIONS } from '../constants/sideBets'
 import { formatMoney } from '../utils/formatters'
 import styles from './SideBetPanel.module.css'
 
-function SideBetPanel({ activeSideBets, onPlace, onRemove, minBet, bankroll, inDebtMode }) {
-  const activeTypes = new Set(activeSideBets.map(sb => sb.type))
-  const canAfford = inDebtMode || bankroll >= minBet
+const LONG_PRESS_MS = 500
+
+function SideBetPanel({ activeSideBets, onPlace, onRemoveChip, onClear, selectedChipValue, bankroll, inDebtMode }) {
+  const timerRef = useRef(null)
+  const longPressedRef = useRef(false)
+
+  const canAfford = inDebtMode || bankroll >= selectedChipValue
+
+  const handlePointerDown = useCallback((betType) => {
+    longPressedRef.current = false
+    timerRef.current = setTimeout(() => {
+      longPressedRef.current = true
+      navigator.vibrate?.(10)
+      onRemoveChip(betType)
+    }, LONG_PRESS_MS)
+  }, [onRemoveChip])
+
+  const handlePointerUp = useCallback((betType, isActive) => {
+    clearTimeout(timerRef.current)
+    if (longPressedRef.current) return
+    if (isActive || canAfford) {
+      onPlace(betType)
+    }
+  }, [onPlace, canAfford])
+
+  const handlePointerLeave = useCallback(() => {
+    clearTimeout(timerRef.current)
+  }, [])
 
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
         <span className={styles.title}>Side Bets</span>
-        <span className={styles.subtitle}>{formatMoney(minBet)} each</span>
+        <span className={styles.subtitle}>Tap to wager &middot; hold to undo</span>
       </div>
       <div className={styles.grid}>
         {SIDE_BET_DEFINITIONS.map(def => {
-          const isActive = activeTypes.has(def.type)
+          const activeBet = activeSideBets.find(sb => sb.type === def.type)
+          const isActive = !!activeBet
           const isJinx = def.type === 'jinxBet'
           const disabled = !isActive && !canAfford
 
@@ -30,22 +56,28 @@ function SideBetPanel({ activeSideBets, onPlace, onRemove, minBet, bankroll, inD
             isJinx ? styles.jinx : '',
           ].filter(Boolean).join(' ')
 
-          const handleClick = () => {
-            if (isActive) {
-              onRemove(def.type)
-            } else if (!disabled) {
-              onPlace(def.type)
-            }
-          }
-
           return (
             <button
               key={def.type}
               className={cardClasses}
-              onClick={handleClick}
+              onPointerDown={() => isActive && handlePointerDown(def.type)}
+              onPointerUp={() => handlePointerUp(def.type, isActive)}
+              onPointerLeave={handlePointerLeave}
+              onContextMenu={(e) => e.preventDefault()}
               disabled={disabled && !isActive}
             >
-              {isActive && <span className={styles.badge}>ACTIVE</span>}
+              {isActive && (
+                <>
+                  <span className={styles.amountBadge}>{formatMoney(activeBet.amount)}</span>
+                  <button
+                    className={styles.clearButton}
+                    onClick={(e) => { e.stopPropagation(); onClear(def.type) }}
+                    aria-label={`Clear ${def.name} bet`}
+                  >
+                    &times;
+                  </button>
+                </>
+              )}
               <span className={styles.name}>{def.name}</span>
               <span className={styles.description}>{def.description}</span>
               <span className={styles.payout}>{payoutLabel}</span>

@@ -14,7 +14,7 @@ import {
   TOGGLE_ASSET_MENU, DISMISS_LOAN_SHARK, TOGGLE_ACHIEVEMENTS, DISMISS_ACHIEVEMENT,
   TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, TOGGLE_DEBT_TRACKER, TOGGLE_HAND_HISTORY, DISMISS_TABLE_TOAST,
   ACCEPT_TABLE_UPGRADE, DECLINE_TABLE_UPGRADE, DISMISS_COMP,
-  PLACE_SIDE_BET, REMOVE_SIDE_BET, TOGGLE_SIDE_BETS,
+  PLACE_SIDE_BET, REMOVE_SIDE_BET_CHIP, CLEAR_SIDE_BET, TOGGLE_SIDE_BETS,
 } from '../reducer/actions'
 import { useDealerTurn } from '../hooks/useDealerTurn'
 import { useDealerMessage } from '../hooks/useDealerMessage'
@@ -188,8 +188,18 @@ function SoloGame({ onBack }) {
   const handleDismissAchievement = useCallback(() => dispatch({ type: DISMISS_ACHIEVEMENT }), [])
   const handleToggleMute = useCallback(() => dispatch({ type: TOGGLE_MUTE }), [])
   const handleToggleNotifications = useCallback(() => dispatch({ type: TOGGLE_NOTIFICATIONS }), [])
-  const handlePlaceSideBet = useCallback((betType) => dispatch({ type: PLACE_SIDE_BET, betType }), [])
-  const handleRemoveSideBet = useCallback((betType) => dispatch({ type: REMOVE_SIDE_BET, betType }), [])
+  const handlePlaceSideBet = useCallback(
+    (betType) => dispatch({ type: PLACE_SIDE_BET, betType, chipValue: stateRef.current.selectedChipValue }),
+    []
+  )
+  const handleRemoveSideBetChip = useCallback(
+    (betType) => dispatch({ type: REMOVE_SIDE_BET_CHIP, betType, chipValue: stateRef.current.selectedChipValue }),
+    []
+  )
+  const handleClearSideBet = useCallback(
+    (betType) => dispatch({ type: CLEAR_SIDE_BET, betType }),
+    []
+  )
   const handleToggleSideBets = useCallback(() => dispatch({ type: TOGGLE_SIDE_BETS }), [])
 
   // --- Derived state ---
@@ -309,8 +319,9 @@ function SoloGame({ onBack }) {
                 <SideBetPanel
                   activeSideBets={state.activeSideBets}
                   onPlace={handlePlaceSideBet}
-                  onRemove={handleRemoveSideBet}
-                  minBet={TABLE_LEVELS[state.tableLevel].minBet}
+                  onRemoveChip={handleRemoveSideBetChip}
+                  onClear={handleClearSideBet}
+                  selectedChipValue={state.selectedChipValue}
                   bankroll={state.bankroll}
                   inDebtMode={state.inDebtMode}
                 />

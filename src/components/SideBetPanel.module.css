@@ -90,18 +90,39 @@
   transform: none;
 }
 
-.badge {
+.clearButton {
   position: absolute;
   top: 4px;
   right: 6px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 8px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(231, 76, 60, 0.6);
+  color: #fff;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--felt-dark);
-  background: var(--gold);
-  padding: 1px 5px;
-  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  padding: 0;
+  touch-action: manipulation;
+}
+
+.clearButton:active {
+  background: rgba(231, 76, 60, 0.9);
+}
+
+.amountBadge {
+  position: absolute;
+  top: 4px;
+  right: 28px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--gold);
 }
 
 .name {
