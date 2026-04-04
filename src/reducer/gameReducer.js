@@ -192,9 +192,39 @@ export function gameReducer(state, action) {
       return { ...state, activeSideBets: newSideBets, bankroll: state.bankroll - chipValue }
     }
 
-    case REMOVE_SIDE_BET: {
+    case REMOVE_SIDE_BET:
+    case CLEAR_SIDE_BET: {
       if (state.phase !== 'betting') return state
-      return { ...state, activeSideBets: state.activeSideBets.filter(sb => sb.type !== action.betType) }
+      const bet = state.activeSideBets.find(sb => sb.type === action.betType)
+      if (!bet) return state
+      return {
+        ...state,
+        activeSideBets: state.activeSideBets.filter(sb => sb.type !== action.betType),
+        bankroll: state.bankroll + bet.amount,
+      }
+    }
+
+    case REMOVE_SIDE_BET_CHIP: {
+      if (state.phase !== 'betting') return state
+      const chipVal = action.chipValue
+      if (!chipVal || chipVal <= 0) return state
+      const existing = state.activeSideBets.find(sb => sb.type === action.betType)
+      if (!existing) return state
+      const newAmount = existing.amount - chipVal
+      if (newAmount <= 0) {
+        return {
+          ...state,
+          activeSideBets: state.activeSideBets.filter(sb => sb.type !== action.betType),
+          bankroll: state.bankroll + existing.amount,
+        }
+      }
+      return {
+        ...state,
+        activeSideBets: state.activeSideBets.map(sb =>
+          sb.type === action.betType ? { ...sb, amount: newAmount } : sb
+        ),
+        bankroll: state.bankroll + chipVal,
+      }
     }
 
     case TOGGLE_SIDE_BETS:

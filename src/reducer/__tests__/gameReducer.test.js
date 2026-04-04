@@ -9,7 +9,7 @@ import {
   DISMISS_ACHIEVEMENT, DISMISS_LOAN_SHARK, UNLOCK_ACHIEVEMENT, LOAD_ACHIEVEMENTS,
   TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, LOAD_HIGHEST_DEBT, SET_DEALER_MESSAGE,
   SET_LOAN_SHARK_MESSAGE, SELECT_CHIP, REMOVE_ASSET,
-  PLACE_SIDE_BET,
+  PLACE_SIDE_BET, CLEAR_SIDE_BET, REMOVE_SIDE_BET_CHIP,
 } from '../actions'
 import { STARTING_BANKROLL, MAX_SPLIT_HANDS, RESHUFFLE_THRESHOLD } from '../../constants/gameConfig'
 import { ASSETS } from '../../constants/assets'
@@ -1795,5 +1795,60 @@ describe('PLACE_SIDE_BET', () => {
     const state = bettingStateWithChip(100)
     expect(gameReducer(state, { type: PLACE_SIDE_BET, betType: 'perfectPair', chipValue: 0 })).toBe(state)
     expect(gameReducer(state, { type: PLACE_SIDE_BET, betType: 'perfectPair' })).toBe(state)
+  })
+})
+
+describe('CLEAR_SIDE_BET', () => {
+  it('removes the side bet and refunds the full amount to bankroll', () => {
+    let state = bettingStateWithChip(100)
+    state = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'colorMatch', chipValue: 500 })
+    const next = gameReducer(state, { type: CLEAR_SIDE_BET, betType: 'colorMatch' })
+    expect(next.activeSideBets).toEqual([])
+    expect(next.bankroll).toBe(STARTING_BANKROLL)
+  })
+
+  it('is blocked when not in betting phase', () => {
+    const state = { ...playingState(), activeSideBets: [{ type: 'colorMatch', amount: 100 }] }
+    const next = gameReducer(state, { type: CLEAR_SIDE_BET, betType: 'colorMatch' })
+    expect(next).toBe(state)
+  })
+
+  it('returns same state when bet type not found', () => {
+    const state = bettingStateWithChip(100)
+    const next = gameReducer(state, { type: CLEAR_SIDE_BET, betType: 'perfectPair' })
+    expect(next).toBe(state)
+  })
+})
+
+describe('REMOVE_SIDE_BET_CHIP', () => {
+  it('subtracts chipValue from side bet and refunds to bankroll', () => {
+    let state = bettingStateWithChip(100)
+    state = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'dealerBust', chipValue: 500 })
+    state = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'dealerBust', chipValue: 100 })
+    const next = gameReducer(state, { type: REMOVE_SIDE_BET_CHIP, betType: 'dealerBust', chipValue: 100 })
+    expect(next.activeSideBets[0].amount).toBe(500)
+    expect(next.bankroll).toBe(STARTING_BANKROLL - 500)
+  })
+
+  it('removes bet entirely when chip value equals remaining amount', () => {
+    let state = bettingStateWithChip(100)
+    state = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'dealerBust', chipValue: 100 })
+    const next = gameReducer(state, { type: REMOVE_SIDE_BET_CHIP, betType: 'dealerBust', chipValue: 100 })
+    expect(next.activeSideBets).toEqual([])
+    expect(next.bankroll).toBe(STARTING_BANKROLL)
+  })
+
+  it('removes bet and refunds full amount when chipValue exceeds bet amount', () => {
+    let state = bettingStateWithChip(100)
+    state = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'dealerBust', chipValue: 100 })
+    const next = gameReducer(state, { type: REMOVE_SIDE_BET_CHIP, betType: 'dealerBust', chipValue: 500 })
+    expect(next.activeSideBets).toEqual([])
+    expect(next.bankroll).toBe(STARTING_BANKROLL)
+  })
+
+  it('is blocked when not in betting phase', () => {
+    const state = { ...playingState(), activeSideBets: [{ type: 'dealerBust', amount: 100 }] }
+    const next = gameReducer(state, { type: REMOVE_SIDE_BET_CHIP, betType: 'dealerBust', chipValue: 100 })
+    expect(next).toBe(state)
   })
 })
