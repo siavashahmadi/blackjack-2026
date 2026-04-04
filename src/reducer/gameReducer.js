@@ -174,12 +174,22 @@ export function gameReducer(state, action) {
 
     case PLACE_SIDE_BET: {
       if (state.phase !== 'betting') return state
-      if (state.activeSideBets.some(sb => sb.type === action.betType)) return state
+      const chipValue = action.chipValue
+      if (!chipValue || chipValue <= 0) return state
       const sbDef = SIDE_BET_MAP[action.betType]
       if (!sbDef) return state
-      const sbAmount = TABLE_LEVELS[state.tableLevel].minBet
-      if (!state.inDebtMode && state.bankroll < sbAmount) return state
-      return { ...state, activeSideBets: [...state.activeSideBets, { type: action.betType, amount: sbAmount }] }
+      if (!state.inDebtMode && state.bankroll < chipValue) return state
+
+      const existing = state.activeSideBets.find(sb => sb.type === action.betType)
+      let newSideBets
+      if (existing) {
+        newSideBets = state.activeSideBets.map(sb =>
+          sb.type === action.betType ? { ...sb, amount: sb.amount + chipValue } : sb
+        )
+      } else {
+        newSideBets = [...state.activeSideBets, { type: action.betType, amount: chipValue }]
+      }
+      return { ...state, activeSideBets: newSideBets, bankroll: state.bankroll - chipValue }
     }
 
     case REMOVE_SIDE_BET: {

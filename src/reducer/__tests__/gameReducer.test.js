@@ -1750,4 +1750,50 @@ describe('PLACE_SIDE_BET', () => {
     }
     expect(state.activeSideBets).toHaveLength(5)
   })
+
+  it('adds a side bet with chipValue amount and deducts from bankroll', () => {
+    const state = bettingStateWithChip(100)
+    const next = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'perfectPair', chipValue: 100 })
+    expect(next.activeSideBets).toEqual([{ type: 'perfectPair', amount: 100 }])
+    expect(next.bankroll).toBe(STARTING_BANKROLL - 100)
+  })
+
+  it('stacks chips on the same side bet type', () => {
+    let state = bettingStateWithChip(100)
+    state = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'perfectPair', chipValue: 100 })
+    state = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'perfectPair', chipValue: 500 })
+    expect(state.activeSideBets).toEqual([{ type: 'perfectPair', amount: 600 }])
+    expect(state.bankroll).toBe(STARTING_BANKROLL - 600)
+  })
+
+  it('is blocked when not in betting phase', () => {
+    const state = playingState()
+    const next = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'perfectPair', chipValue: 100 })
+    expect(next).toBe(state)
+  })
+
+  it('is blocked when chipValue exceeds bankroll and not in debt mode', () => {
+    const state = { ...bettingStateWithChip(100), bankroll: 50 }
+    const next = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'perfectPair', chipValue: 100 })
+    expect(next).toBe(state)
+  })
+
+  it('allows placement in debt mode even with negative bankroll', () => {
+    const state = { ...bettingStateWithChip(100), bankroll: -500, inDebtMode: true }
+    const next = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'dealerBust', chipValue: 100 })
+    expect(next.activeSideBets).toHaveLength(1)
+    expect(next.bankroll).toBe(-600)
+  })
+
+  it('is blocked for unknown bet types', () => {
+    const state = bettingStateWithChip(100)
+    const next = gameReducer(state, { type: PLACE_SIDE_BET, betType: 'fakeBet', chipValue: 100 })
+    expect(next).toBe(state)
+  })
+
+  it('is blocked when chipValue is 0 or missing', () => {
+    const state = bettingStateWithChip(100)
+    expect(gameReducer(state, { type: PLACE_SIDE_BET, betType: 'perfectPair', chipValue: 0 })).toBe(state)
+    expect(gameReducer(state, { type: PLACE_SIDE_BET, betType: 'perfectPair' })).toBe(state)
+  })
 })
