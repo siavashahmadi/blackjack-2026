@@ -20,8 +20,11 @@ function SideBetPanel({ activeSideBets, onPlace, onRemoveChip, onClear, selected
     }, LONG_PRESS_MS)
   }, [onRemoveChip])
 
-  const handlePointerUp = useCallback((betType, isActive) => {
+  const handlePointerUp = useCallback(() => {
     clearTimeout(timerRef.current)
+  }, [])
+
+  const handleClick = useCallback((betType, isActive) => {
     if (longPressedRef.current) return
     if (isActive || canAfford) {
       onPlace(betType)
@@ -63,8 +66,9 @@ function SideBetPanel({ activeSideBets, onPlace, onRemoveChip, onClear, selected
               role="button"
               tabIndex={disabled && !isActive ? -1 : 0}
               onPointerDown={() => isActive && handlePointerDown(def.type)}
-              onPointerUp={() => handlePointerUp(def.type, isActive)}
+              onPointerUp={handlePointerUp}
               onPointerLeave={handlePointerLeave}
+              onClick={() => handleClick(def.type, isActive)}
               onContextMenu={(e) => e.preventDefault()}
               aria-disabled={disabled && !isActive}
             >
