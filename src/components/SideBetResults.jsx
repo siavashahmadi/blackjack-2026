@@ -1,24 +1,22 @@
 import React from 'react'
-import { SIDE_BET_MAP } from '../constants/sideBets'
 import { formatMoney } from '../utils/formatters'
 import styles from './SideBetResults.module.css'
 
 function SideBetResults({ results }) {
   if (!results || results.length === 0) return null
 
+  const netPayout = results.reduce((sum, r) => sum + r.payout, 0)
+  if (netPayout === 0) return null
+
+  const isPositive = netPayout > 0
+  const badgeClass = isPositive ? styles.won : styles.lost
+  const label = isPositive
+    ? `Side Bets: +${formatMoney(netPayout)}`
+    : `Side Bets: ${formatMoney(netPayout)}`
+
   return (
     <div className={styles.container}>
-      {results.map((r, i) => {
-        const def = SIDE_BET_MAP[r.type]
-        const name = def ? def.name : r.type
-        const badgeClass = r.won ? styles.won : styles.lost
-
-        return (
-          <span key={`${r.type}-${i}`} className={`${styles.badge} ${badgeClass}`}>
-            {name}: {r.won ? `WON +${formatMoney(r.payout)}` : `LOST ${formatMoney(r.payout)}`}
-          </span>
-        )
-      })}
+      <span className={`${styles.badge} ${badgeClass}`}>{label}</span>
     </div>
   )
 }
