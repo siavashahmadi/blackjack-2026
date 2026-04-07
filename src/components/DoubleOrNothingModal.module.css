@@ -1,0 +1,138 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-critical);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal {
+  background: linear-gradient(170deg, var(--modal-bg-warm) 0%, var(--felt-dark) 100%);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  padding: 28px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 340px;
+  margin: 0 16px;
+  box-shadow: 0 0 40px rgba(240, 200, 80, 0.15), 0 0 80px rgba(240, 200, 80, 0.05);
+  animation: modalPop 0.35s ease-out;
+}
+
+.coin {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  perspective: 600px;
+  box-shadow: 0 0 20px var(--gold-glow);
+}
+
+.coinFace {
+  font-size: 36px;
+  font-weight: 900;
+  color: #1a1a10;
+}
+
+.spinning {
+  animation: coinSpin 1s ease-in-out;
+}
+
+.coin.win {
+  background: linear-gradient(135deg, var(--success) 0%, #1e8449 100%);
+  box-shadow: 0 0 30px rgba(39, 174, 96, 0.5);
+}
+
+.coin.lose {
+  background: linear-gradient(135deg, var(--danger) 0%, #962d22 100%);
+  box-shadow: 0 0 30px rgba(231, 76, 60, 0.5);
+}
+
+.stakes {
+  font-family: 'Outfit', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--gold);
+  margin: 4px 0;
+}
+
+.resultText {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin: 8px 0;
+}
+
+.resultText.win { color: var(--success); }
+.resultText.lose { color: var(--danger); }
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.flipButton {
+  padding: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(180deg, var(--gold) 0%, #b8860b 100%);
+  color: #1a1a10;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  animation: buttonPulse 2s ease-in-out infinite;
+}
+
+.flipButton:active { transform: scale(0.95); }
+
+.walkButton {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--text-dim);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.walkButton:active { transform: scale(0.95); }
+
+@keyframes coinSpin {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(1800deg); }
+}
+
+@keyframes buttonPulse {
+  0%, 100% { box-shadow: 0 0 10px var(--gold-glow); }
+  50% { box-shadow: 0 0 25px var(--gold-glow), 0 0 50px rgba(240, 200, 80, 0.1); }
+}
+
+@keyframes modalPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.04); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
