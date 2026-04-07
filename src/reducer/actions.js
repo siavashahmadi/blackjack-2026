@@ -39,6 +39,9 @@ export const REMOVE_SIDE_BET = 'REMOVE_SIDE_BET'
 export const TOGGLE_SIDE_BETS = 'TOGGLE_SIDE_BETS'
 export const REMOVE_SIDE_BET_CHIP = 'REMOVE_SIDE_BET_CHIP'
 export const CLEAR_SIDE_BET = 'CLEAR_SIDE_BET'
+export const OFFER_DOUBLE_OR_NOTHING = 'OFFER_DOUBLE_OR_NOTHING'
+export const ACCEPT_DOUBLE_OR_NOTHING = 'ACCEPT_DOUBLE_OR_NOTHING'
+export const DECLINE_DOUBLE_OR_NOTHING = 'DECLINE_DOUBLE_OR_NOTHING'
 
 // Action creators for actions with payloads
 export const addChip = (value) => ({ type: ADD_CHIP, value })
@@ -73,6 +76,9 @@ export const setCompMessage = (messages, seenThresholds, totalCompValue = 0) => 
 export const placeSideBet = (betType, chipValue) => ({ type: PLACE_SIDE_BET, betType, chipValue })
 export const removeSideBetChip = (betType, chipValue) => ({ type: REMOVE_SIDE_BET_CHIP, betType, chipValue })
 export const clearSideBet = (betType) => ({ type: CLEAR_SIDE_BET, betType })
+export const offerDoubleOrNothing = (lossAmount) => ({ type: OFFER_DOUBLE_OR_NOTHING, lossAmount })
+export const acceptDoubleOrNothing = (won) => ({ type: ACCEPT_DOUBLE_OR_NOTHING, won })
+export const declineDoubleOrNothing = () => ({ type: DECLINE_DOUBLE_OR_NOTHING })
 export const takeLoan = () => ({ type: TAKE_LOAN })
 export const newRound = (freshDeck) => ({ type: NEW_ROUND, freshDeck })
 export const resetGame = (freshDeck) => ({ type: RESET_GAME, freshDeck })

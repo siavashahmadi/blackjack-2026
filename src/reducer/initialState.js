@@ -72,6 +72,10 @@ export function createInitialState() {
     lowestBankroll: STARTING_BANKROLL,
     bankrollHistory: [],
     handHistory: [],
+    donFlipsWon: 0,
+    donFlipsLost: 0,
+    donBiggestStakes: 0,
+    donLastChainLength: 0,
 
     // Systems
     unlockedAchievements: [],
@@ -84,6 +88,10 @@ export function createInitialState() {
     activeSideBets: [],    // [{ type, amount }] placed during betting
     sideBetResults: [],    // [{ type, amount, won, payout }] resolved
     showSideBets: false,   // UI toggle
+
+    // Double or Nothing
+    doubleOrNothing: null,
+    // When active: { originalLoss, currentStakes, flipCount, lastResult }
 
     // UI
     showAssetMenu: false,
