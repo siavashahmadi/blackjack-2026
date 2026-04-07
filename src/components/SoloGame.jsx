@@ -15,6 +15,7 @@ import {
   TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, TOGGLE_DEBT_TRACKER, TOGGLE_HAND_HISTORY, DISMISS_TABLE_TOAST,
   ACCEPT_TABLE_UPGRADE, DECLINE_TABLE_UPGRADE, DISMISS_COMP,
   PLACE_SIDE_BET, REMOVE_SIDE_BET_CHIP, CLEAR_SIDE_BET, TOGGLE_SIDE_BETS,
+  acceptDoubleOrNothing, declineDoubleOrNothing,
 } from '../reducer/actions'
 import { useDealerTurn } from '../hooks/useDealerTurn'
 import { useDealerMessage } from '../hooks/useDealerMessage'
@@ -25,6 +26,7 @@ import { useSound } from '../hooks/useSound'
 import { useSessionPersistence } from '../hooks/useSessionPersistence'
 import { useChipInteraction } from '../hooks/useChipInteraction'
 import { useAssetConfirmation } from '../hooks/useAssetConfirmation'
+import { useDoubleOrNothing } from '../hooks/useDoubleOrNothing'
 import Header from './Header'
 import BankrollDisplay from './BankrollDisplay'
 import DealerArea from './DealerArea'
@@ -41,6 +43,7 @@ import StatsPanel from './StatsPanel'
 import HandHistory from './HandHistory'
 import TableLevelToast from './TableLevelToast'
 import TableUpgradeModal from './TableUpgradeModal'
+import DoubleOrNothingModal from './DoubleOrNothingModal'
 import SideBetPanel from './SideBetPanel'
 import SideBetResults from './SideBetResults'
 import FlyingChip from './FlyingChip'
@@ -86,6 +89,7 @@ function SoloGame({ onBack }) {
   useAchievements(state, dispatch)
   useSound(state)
   useSessionPersistence(state, dispatch)
+  useDoubleOrNothing(state, dispatch)
 
   // Set felt color via data-table attribute on <html>
   useEffect(() => {
@@ -184,6 +188,8 @@ function SoloGame({ onBack }) {
   const handleTakeLoan = useCallback(() => dispatch(takeLoan()), [])
   const handleDismissLoanShark = useCallback(() => dispatch({ type: DISMISS_LOAN_SHARK }), [])
   const handleDismissComp = useCallback(() => dispatch({ type: DISMISS_COMP }), [])
+  const handleDonAccept = useCallback((won) => dispatch(acceptDoubleOrNothing(won)), [])
+  const handleDonDecline = useCallback(() => dispatch(declineDoubleOrNothing()), [])
   const handleToggleAchievements = useCallback(() => dispatch({ type: TOGGLE_ACHIEVEMENTS }), [])
   const handleToggleDebtTracker = useCallback(() => dispatch({ type: TOGGLE_DEBT_TRACKER }), [])
   const handleToggleHandHistory = useCallback(() => dispatch({ type: TOGGLE_HAND_HISTORY }), [])
@@ -256,14 +262,16 @@ function SoloGame({ onBack }) {
         <span className={styles.feltWatermark} key={TABLE_LEVELS[state.tableLevel].id}>
           {TABLE_LEVELS[state.tableLevel].subtitle}
         </span>
-        <DealerArea
-          hand={state.dealerHand}
-          phase={state.phase}
-          hideHoleCard={hideHoleCard}
-          dealerMessage={state.dealerMessage}
-          deckLength={state.deck.length}
-          dealer={getDealerForLevel(state.tableLevel)}
-        />
+        <div className={styles.dealerRow}>
+          <DealerArea
+            hand={state.dealerHand}
+            phase={state.phase}
+            hideHoleCard={hideHoleCard}
+            dealerMessage={state.dealerMessage}
+            deckLength={state.deck.length}
+            dealer={getDealerForLevel(state.tableLevel)}
+          />
+        </div>
         <BettingCircle
           ref={circleRef}
           chipStack={state.chipStack}
@@ -273,14 +281,18 @@ function SoloGame({ onBack }) {
           onRemoveAsset={handleRemoveAsset}
           playerHands={state.playerHands}
         />
-        <PlayerArea
-          playerHands={state.playerHands}
-          activeHandIndex={state.activeHandIndex}
-          phase={state.phase}
-          bettedAssets={state.bettedAssets}
-        />
+        <div className={styles.playerRow}>
+          <PlayerArea
+            playerHands={state.playerHands}
+            activeHandIndex={state.activeHandIndex}
+            phase={state.phase}
+            bettedAssets={state.bettedAssets}
+          />
+        </div>
         {state.sideBetResults.length > 0 && (
-          <SideBetResults results={state.sideBetResults} />
+          <div className={styles.sideBetResultsOverlay}>
+            <SideBetResults results={state.sideBetResults} />
+          </div>
         )}
         {state.phase === 'result' && state.result && (
           <ResultBanner
@@ -292,7 +304,7 @@ function SoloGame({ onBack }) {
       </div>
 
       <div className={styles.controlsArea}>
-        <div key={state.phase} className={styles.phaseContent}>
+        <div className={styles.phaseContent}>
           {state.phase === 'betting' && (
             <>
               <BettingControls
@@ -343,7 +355,7 @@ function SoloGame({ onBack }) {
           {state.phase === 'dealerTurn' && (
             <div className={styles.waitingMessage}>Dealer&apos;s turn...</div>
           )}
-          {state.phase === 'result' && state.chipStack.length === 0 && (
+          {state.phase === 'result' && state.chipStack.length === 0 && !state.doubleOrNothing && (
             <ResultBanner
               result={state.result}
               bankroll={state.bankroll}
@@ -434,6 +446,14 @@ function SoloGame({ onBack }) {
           pendingUpgrade={state.pendingTableUpgrade}
           onAccept={handleAcceptUpgrade}
           onDecline={handleDeclineUpgrade}
+        />
+      )}
+
+      {state.doubleOrNothing && (
+        <DoubleOrNothingModal
+          doubleOrNothing={state.doubleOrNothing}
+          onAccept={handleDonAccept}
+          onDecline={handleDonDecline}
         />
       )}
 
