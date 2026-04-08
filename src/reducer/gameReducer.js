@@ -107,6 +107,18 @@ function advanceAfterSplit(hands, activeIndex) {
   return { phase: 'playing', result: null, activeHandIndex: idx }
 }
 
+function findSideBet(activeSideBets, betType) {
+  return activeSideBets.find(sb => sb.type === betType)
+}
+
+function updateSideBet(activeSideBets, betType, updater) {
+  return activeSideBets.map(sb => sb.type === betType ? updater(sb) : sb)
+}
+
+function removeSideBetFromList(activeSideBets, betType) {
+  return activeSideBets.filter(sb => sb.type !== betType)
+}
+
 /*
  * DEBT GATE FLOW — How assets, debt, and vig interact:
  *
@@ -181,12 +193,10 @@ export function gameReducer(state, action) {
       if (!sbDef) return state
       if (!state.inDebtMode && state.bankroll < chipValue) return state
 
-      const existing = state.activeSideBets.find(sb => sb.type === action.betType)
+      const existing = findSideBet(state.activeSideBets, action.betType)
       let newSideBets
       if (existing) {
-        newSideBets = state.activeSideBets.map(sb =>
-          sb.type === action.betType ? { ...sb, amount: sb.amount + chipValue } : sb
-        )
+        newSideBets = updateSideBet(state.activeSideBets, action.betType, sb => ({ ...sb, amount: sb.amount + chipValue }))
       } else {
         newSideBets = [...state.activeSideBets, { type: action.betType, amount: chipValue }]
       }
@@ -195,11 +205,11 @@ export function gameReducer(state, action) {
 
     case CLEAR_SIDE_BET: {
       if (state.phase !== 'betting') return state
-      const bet = state.activeSideBets.find(sb => sb.type === action.betType)
+      const bet = findSideBet(state.activeSideBets, action.betType)
       if (!bet) return state
       return {
         ...state,
-        activeSideBets: state.activeSideBets.filter(sb => sb.type !== action.betType),
+        activeSideBets: removeSideBetFromList(state.activeSideBets, action.betType),
         bankroll: state.bankroll + bet.amount,
       }
     }
@@ -208,21 +218,19 @@ export function gameReducer(state, action) {
       if (state.phase !== 'betting') return state
       const chipVal = action.chipValue
       if (!chipVal || chipVal <= 0) return state
-      const existing = state.activeSideBets.find(sb => sb.type === action.betType)
+      const existing = findSideBet(state.activeSideBets, action.betType)
       if (!existing) return state
       const newAmount = existing.amount - chipVal
       if (newAmount <= 0) {
         return {
           ...state,
-          activeSideBets: state.activeSideBets.filter(sb => sb.type !== action.betType),
+          activeSideBets: removeSideBetFromList(state.activeSideBets, action.betType),
           bankroll: state.bankroll + existing.amount,
         }
       }
       return {
         ...state,
-        activeSideBets: state.activeSideBets.map(sb =>
-          sb.type === action.betType ? { ...sb, amount: newAmount } : sb
-        ),
+        activeSideBets: updateSideBet(state.activeSideBets, action.betType, sb => ({ ...sb, amount: newAmount })),
         bankroll: state.bankroll + chipVal,
       }
     }
