@@ -13,6 +13,7 @@
   transform: translateX(-50%);
   margin-bottom: 4px;
   z-index: 10;
+  max-width: calc(100vw - 32px);
 }
 
 .label {
