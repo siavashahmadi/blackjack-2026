@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 950;
+  z-index: var(--z-toast);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -13,7 +13,7 @@
 }
 
 .toast {
-  background: linear-gradient(135deg, #3a2a0a, #1a1205);
+  background: linear-gradient(135deg, var(--comp-bg), var(--comp-bg-end));
   border: 1px solid var(--gold-dim);
   border-radius: 12px;
   padding: 20px 24px;
@@ -60,7 +60,7 @@
   font-family: 'Outfit', sans-serif;
   font-size: 14px;
   font-weight: 700;
-  color: #7FFFD4;
+  color: var(--comp-accent);
   margin-bottom: 10px;
 }
 
