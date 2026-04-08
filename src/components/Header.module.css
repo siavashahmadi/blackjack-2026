@@ -89,7 +89,7 @@
   border-radius: 10px;
   padding: 6px 0;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  z-index: 100;
+  z-index: var(--z-dropdown);
   animation: menuSlideDown 0.15s ease-out;
 }
 
