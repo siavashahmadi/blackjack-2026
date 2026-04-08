@@ -5,12 +5,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1100;
+  z-index: var(--z-critical);
   animation: fadeIn 0.2s ease-out;
 }
 
 .modal {
-  background: linear-gradient(170deg, #1a1a10 0%, var(--felt-dark) 100%);
+  background: linear-gradient(170deg, var(--modal-bg-warm) 0%, var(--felt-dark) 100%);
   border: 2px solid var(--gold);
   border-radius: 16px;
   padding: 28px 28px 24px;
