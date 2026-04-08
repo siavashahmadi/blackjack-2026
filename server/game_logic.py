@@ -1219,8 +1219,12 @@ class GameEngine:
 
         current_pid = self._get_current_player_id(room)
 
+        # Translate internal snake_case phase to camelCase for client
+        _phase_map = {"dealer_turn": "dealerTurn"}
+        client_phase = _phase_map.get(room.phase, room.phase)
+
         return {
-            "phase": room.phase,
+            "phase": client_phase,
             "round": room.round_number,
             "dealer_hand": dealer_hand_visible,
             "dealer_value": hand_value(room.dealer_hand) if not should_hide else None,

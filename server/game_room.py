@@ -59,7 +59,7 @@ class PlayerState:
 class GameRoom:
     code: str
     players: dict[str, PlayerState] = field(default_factory=dict)
-    phase: str = "lobby"  # lobby|betting|playing|dealer_turn|result
+    phase: str = "lobby"  # lobby|betting|playing|dealer_turn|result  (dealer_turn serialized as dealerTurn to client)
     host_id: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 

@@ -235,7 +235,7 @@ function MultiplayerGame({ state, send, dispatch, onLeave }) {
             <WaitingIndicator playerName={currentPlayerName} />
           )}
 
-          {state.phase === 'dealer_turn' && (
+          {state.phase === 'dealerTurn' && (
             <div className={styles.waitingMessage}>Dealer&apos;s turn...</div>
           )}
 

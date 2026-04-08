@@ -647,7 +647,7 @@ async def handle_reconnect(player_id_from_msg: str, code: str, session_token: st
             "player_id": player_id_from_msg,
             "session_token": player.session_token,
             "players": get_player_list(room),
-            "phase": room.phase,
+            "phase": {"dealer_turn": "dealerTurn"}.get(room.phase, room.phase),
         }
         if room.phase not in ("lobby",):
             reconnect_msg["state"] = engine.get_room_state(room)

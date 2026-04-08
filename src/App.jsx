@@ -18,7 +18,7 @@ function MultiplayerApp({ onBack }) {
   }, [disconnect, onBack])
 
   const isInGame = state.phase === 'betting' || state.phase === 'playing' ||
-                   state.phase === 'dealer_turn' || state.phase === 'result'
+                   state.phase === 'dealerTurn' || state.phase === 'result'
 
   if (isInGame) {
     return (

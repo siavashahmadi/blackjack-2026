@@ -50,14 +50,14 @@ export function useMultiplayerSound(state) {
     }
 
     // Dealer draws during dealer turn
-    if (state.phase === 'dealer_turn' && prev.phase === 'dealer_turn') {
+    if (state.phase === 'dealerTurn' && prev.phase === 'dealerTurn') {
       if (state.dealerHand.length > prev.dealerHand.length) {
         audioManager.play('card_deal')
       }
     }
 
     // Hole card reveal — transition to dealer turn
-    if (prev.phase === 'playing' && state.phase === 'dealer_turn') {
+    if (prev.phase === 'playing' && state.phase === 'dealerTurn') {
       audioManager.play('card_flip')
     }
 

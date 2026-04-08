@@ -11,7 +11,7 @@ export const multiplayerInitialState = {
   isHost: false,
 
   // Game state (from server)
-  phase: 'disconnected', // disconnected | lobby | betting | playing | dealer_turn | result
+  phase: 'disconnected', // disconnected | lobby | betting | playing | dealerTurn | result
   round: 0,
   dealerHand: [],
   dealerValue: null,
