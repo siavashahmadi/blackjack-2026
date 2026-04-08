@@ -14,7 +14,8 @@ import {
   TOGGLE_ASSET_MENU, DISMISS_LOAN_SHARK, TOGGLE_ACHIEVEMENTS, DISMISS_ACHIEVEMENT,
   TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, TOGGLE_DEBT_TRACKER, TOGGLE_HAND_HISTORY, DISMISS_TABLE_TOAST,
   ACCEPT_TABLE_UPGRADE, DECLINE_TABLE_UPGRADE, DISMISS_COMP,
-  PLACE_SIDE_BET, REMOVE_SIDE_BET_CHIP, CLEAR_SIDE_BET, TOGGLE_SIDE_BETS,
+  TOGGLE_SIDE_BETS,
+  placeSideBet, removeSideBetChip, clearSideBet,
   acceptDoubleOrNothing, declineDoubleOrNothing,
 } from '../reducer/actions'
 import { useDealerTurn } from '../hooks/useDealerTurn'
@@ -197,15 +198,15 @@ function SoloGame({ onBack }) {
   const handleToggleMute = useCallback(() => dispatch({ type: TOGGLE_MUTE }), [])
   const handleToggleNotifications = useCallback(() => dispatch({ type: TOGGLE_NOTIFICATIONS }), [])
   const handlePlaceSideBet = useCallback(
-    (betType) => dispatch({ type: PLACE_SIDE_BET, betType, chipValue: stateRef.current.selectedChipValue }),
+    (betType) => dispatch(placeSideBet(betType, stateRef.current.selectedChipValue)),
     []
   )
   const handleRemoveSideBetChip = useCallback(
-    (betType) => dispatch({ type: REMOVE_SIDE_BET_CHIP, betType, chipValue: stateRef.current.selectedChipValue }),
+    (betType) => dispatch(removeSideBetChip(betType, stateRef.current.selectedChipValue)),
     []
   )
   const handleClearSideBet = useCallback(
-    (betType) => dispatch({ type: CLEAR_SIDE_BET, betType }),
+    (betType) => dispatch(clearSideBet(betType)),
     []
   )
   const handleToggleSideBets = useCallback(() => dispatch({ type: TOGGLE_SIDE_BETS }), [])
