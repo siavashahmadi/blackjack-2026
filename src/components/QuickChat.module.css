@@ -76,7 +76,7 @@
   top: 8px;
   left: 12px;
   right: 56px;
-  z-index: 150;  /* between sticky and overlay */
+  z-index: var(--z-dropdown);
   display: flex;
   flex-direction: column;
   gap: 4px;

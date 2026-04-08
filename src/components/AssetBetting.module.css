@@ -65,7 +65,7 @@
   border-radius: 8px;
   padding: 4px;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
-  z-index: 10;
+  z-index: var(--z-modal);
   animation: fadeIn 0.2s ease-out both;
 }
 

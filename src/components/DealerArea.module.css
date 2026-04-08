@@ -12,7 +12,7 @@
   left: 50%;
   transform: translateX(-50%);
   margin-bottom: 4px;
-  z-index: 10;
+  z-index: var(--z-popup);
   max-width: calc(100vw - 32px);
 }
 

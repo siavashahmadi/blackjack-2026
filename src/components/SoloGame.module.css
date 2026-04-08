@@ -41,7 +41,7 @@
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 5;
+  z-index: var(--z-base);
   pointer-events: none;
 }
 
@@ -59,7 +59,7 @@
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
-  z-index: 0;
+  z-index: calc(var(--z-base) - 1);
   animation: watermarkFadeIn 1.2s ease-out;
 }
 
@@ -73,7 +73,7 @@
   min-height: 160px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
   position: relative;
-  z-index: 2;
+  z-index: calc(var(--z-base) + 1);
 }
 
 .phaseContent {

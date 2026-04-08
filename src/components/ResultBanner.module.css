@@ -14,7 +14,7 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  z-index: 10;
+  z-index: var(--z-modal);
   animation: modalIn 0.2s ease-out both;
 }
 
