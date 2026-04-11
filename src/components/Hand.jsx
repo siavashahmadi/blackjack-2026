@@ -18,7 +18,7 @@ function getCardMargin(cardCount, cardIndex, size) {
   return -35
 }
 
-const Hand = memo(function Hand({ cards = [], hideFirst = false, animate = true, size = 'normal', dealType = 'deal', flipIndex = -1 }) {
+const Hand = memo(function Hand({ cards = [], hideFirst = false, hideLast = false, animate = true, size = 'normal', dealType = 'deal', flipIndex = -1 }) {
   const cardCount = cards.length
   // Track cards already rendered so only new cards get deal animations
   const knownCardsRef = useRef(new Set())
@@ -60,7 +60,7 @@ const Hand = memo(function Hand({ cards = [], hideFirst = false, animate = true,
           >
             <Card
               card={card}
-              faceDown={hideFirst && i === 0}
+              faceDown={(hideFirst && i === 0) || (hideLast && i === cards.length - 1)}
               index={isNew ? (newCardStagger.get(card.id) || 0) : 0}
               animate={animate && (isNew || isFlipping)}
               size={size}

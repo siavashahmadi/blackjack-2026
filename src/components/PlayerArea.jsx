@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Hand from './Hand'
 import { handValue } from '../utils/cardUtils'
 import { formatMoney } from '../utils/formatters'
@@ -11,11 +11,29 @@ function getCardSize(handCount) {
   return 'small'
 }
 
-function PlayerArea({ playerHands, activeHandIndex, phase, bettedAssets }) {
+function PlayerArea({ playerHands, activeHandIndex, phase, bettedAssets, ddCardFaceDown }) {
   const handCount = playerHands.length
   const hasCards = handCount > 0 && playerHands.some(h => h.cards.length > 0)
   const cardSize = getCardSize(handCount)
   const dealType = phase === 'playing' ? 'hit' : 'deal'
+
+  // Flip DD card when transitioning to result phase
+  const prevPhaseRef = useRef(phase)
+  const [flipDdCard, setFlipDdCard] = useState(false)
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (prevPhaseRef.current !== 'result' && phase === 'result') {
+      if (ddCardFaceDown && playerHands.some(h => h.isDoubledDown)) {
+        setFlipDdCard(true)
+        const timer = setTimeout(() => setFlipDdCard(false), 600)
+        prevPhaseRef.current = phase
+        return () => clearTimeout(timer)
+      }
+    }
+    prevPhaseRef.current = phase
+  }, [phase, playerHands, ddCardFaceDown])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!hasCards) {
     return (
@@ -32,12 +50,14 @@ function PlayerArea({ playerHands, activeHandIndex, phase, bettedAssets }) {
   // Single hand — original layout
   if (handCount === 1) {
     const hand = playerHands[0]
-    const value = handValue(hand.cards)
+    const hideLast = hand.isDoubledDown && ddCardFaceDown && phase !== 'result'
+    const value = hideLast ? handValue(hand.cards.slice(0, -1)) : handValue(hand.cards)
+    const flipIndex = flipDdCard && hand.isDoubledDown ? hand.cards.length - 1 : -1
     return (
       <div className={styles.area}>
         <span className={styles.value}>{hand.cards.length > 0 ? value : '\u00A0'}</span>
         <div className={styles.handWrapper}>
-          <Hand cards={hand.cards} dealType={dealType} />
+          <Hand cards={hand.cards} dealType={dealType} hideLast={hideLast} flipIndex={flipIndex} />
         </div>
         <span className={styles.label}>YOUR HAND</span>
       </div>
@@ -49,7 +69,11 @@ function PlayerArea({ playerHands, activeHandIndex, phase, bettedAssets }) {
     <div className={styles.area}>
       <div className={styles.handsContainer}>
         {playerHands.map((hand, i) => {
-          const value = hand.cards.length > 0 ? handValue(hand.cards) : 0
+          const hideLast = hand.isDoubledDown && ddCardFaceDown && phase !== 'result'
+          const value = hand.cards.length > 0
+            ? (hideLast ? handValue(hand.cards.slice(0, -1)) : handValue(hand.cards))
+            : 0
+          const flipIndex = flipDdCard && hand.isDoubledDown ? hand.cards.length - 1 : -1
           const isActive = i === activeHandIndex && phase === 'playing'
           const isDone = hand.status === 'bust' || hand.status === 'standing' || hand.status === 'done'
           const showResult = hand.result && phase === 'result'
@@ -63,7 +87,7 @@ function PlayerArea({ playerHands, activeHandIndex, phase, bettedAssets }) {
                 <span className={styles.handValue}>{value}</span>
                 {hand.isDoubledDown && <span className={styles.ddBadge}>2x</span>}
               </div>
-              <Hand cards={hand.cards} size={cardSize} dealType={dealType} />
+              <Hand cards={hand.cards} size={cardSize} dealType={dealType} hideLast={hideLast} flipIndex={flipIndex} />
               {phase === 'playing' && (
                 isDone ? (
                   <span className={`${styles.statusBadge} ${styles[`status_${hand.status}`]}`}>
