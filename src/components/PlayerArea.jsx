@@ -20,6 +20,7 @@ function PlayerArea({ playerHands, activeHandIndex, phase, bettedAssets }) {
   if (!hasCards) {
     return (
       <div className={styles.area}>
+        <span className={styles.value}>{'\u00A0'}</span>
         <div className={styles.handWrapper}>
           <div className={styles.empty} />
         </div>
@@ -34,9 +35,7 @@ function PlayerArea({ playerHands, activeHandIndex, phase, bettedAssets }) {
     const value = handValue(hand.cards)
     return (
       <div className={styles.area}>
-        {hand.cards.length > 0 && (
-          <span className={styles.value}>{value}</span>
-        )}
+        <span className={styles.value}>{hand.cards.length > 0 ? value : '\u00A0'}</span>
         <div className={styles.handWrapper}>
           <Hand cards={hand.cards} dealType={dealType} />
         </div>
