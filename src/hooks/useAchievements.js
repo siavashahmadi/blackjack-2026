@@ -4,7 +4,7 @@ import { unlockAchievement, loadAchievements } from '../reducer/actions'
 import { RESULTS } from '../constants/results'
 import { usePrevious } from './usePrevious'
 
-const STORAGE_KEY = 'blackjack_achievements'
+const STORAGE_KEY = 'housemoney_achievements'
 
 const ASSET_ACHIEVEMENT_MAP = {
   watch: 'bet_watch',

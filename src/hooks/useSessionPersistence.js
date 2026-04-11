@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react'
 import { TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, loadHighestDebt } from '../reducer/actions'
 
 const KEYS = {
-  MUTED: 'blackjack_muted',
-  HIGHEST_DEBT: 'blackjack_highest_debt',
-  NOTIFICATIONS: 'blackjack_notifications',
+  MUTED: 'housemoney_muted',
+  HIGHEST_DEBT: 'housemoney_highest_debt',
+  NOTIFICATIONS: 'housemoney_notifications',
 }
 
 export function useSessionPersistence(state, dispatch) {
