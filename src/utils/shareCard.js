@@ -117,7 +117,7 @@ export function renderShareCard(state) {
   ctx.strokeRect(20, 20, CARD_W - 40, CARD_H - 40)
 
   // Title
-  drawText(ctx, 'BLACKJACK', CARD_W / 2, 60, '900 28px "Playfair Display", Georgia, serif', '#f0c850', 'center')
+  drawText(ctx, 'HOUSE MONEY', CARD_W / 2, 60, '900 28px "Playfair Display", Georgia, serif', '#f0c850', 'center')
 
   // Tagline
   const tagline = getTagline(state.bankroll)
@@ -192,13 +192,13 @@ export async function shareStats(state) {
   const canvas = renderShareCard(state)
 
   const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
-  const file = new File([blob], 'blackjack-stats.png', { type: 'image/png' })
+  const file = new File([blob], 'housemoney-stats.png', { type: 'image/png' })
 
   // Try Web Share API (mobile)
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({
-        title: 'My Blackjack Stats',
+        title: 'My House Money Stats',
         files: [file],
       })
       return
@@ -211,7 +211,7 @@ export async function shareStats(state) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'blackjack-stats.png'
+  a.download = 'housemoney-stats.png'
   a.click()
   URL.revokeObjectURL(url)
 }
