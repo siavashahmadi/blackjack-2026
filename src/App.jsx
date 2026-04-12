@@ -1,6 +1,7 @@
 import { useState, useReducer, useCallback } from 'react'
 import ModeSelect from './components/ModeSelect'
 import SoloGame from './components/SoloGame'
+import SoloSlots from './components/slots/SoloSlots'
 import Lobby from './components/Lobby'
 import MultiplayerGame from './components/MultiplayerGame'
 import { multiplayerReducer } from './reducer/multiplayerReducer'
@@ -48,16 +49,16 @@ function App() {
   return (
     <div className={styles.app}>
       {mode === null && (
-        <ModeSelect
-          onSelectSolo={() => setMode('solo')}
-          onSelectMultiplayer={() => setMode('multiplayer')}
-        />
+        <ModeSelect onSelectMode={setMode} />
       )}
-      {mode === 'solo' && (
+      {mode === 'solo-blackjack' && (
         <SoloGame onBack={() => setMode(null)} />
       )}
-      {mode === 'multiplayer' && (
+      {mode === 'multiplayer-blackjack' && (
         <MultiplayerApp onBack={() => setMode(null)} />
+      )}
+      {mode === 'solo-slots' && (
+        <SoloSlots onBack={() => setMode(null)} />
       )}
     </div>
   )
