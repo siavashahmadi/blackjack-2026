@@ -1,0 +1,96 @@
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 16px;
+}
+
+.chipTrayWrapper {
+  position: relative;
+}
+
+.controlRow {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.smallButton {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: opacity 0.15s ease;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.smallButton:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.smallButton:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.allInButton {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--danger), var(--danger-dark));
+  padding: 6px 14px;
+  border-radius: 6px;
+  margin-left: auto;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.allInButton:active {
+  transform: scale(0.95);
+}
+
+.cooldown {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cooldown:active {
+  transform: none;
+}
+
+.spinButton {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--felt-dark);
+  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  padding: 0 24px;
+  min-height: 52px;
+  border-radius: 12px;
+  letter-spacing: 3px;
+  box-shadow: 0 2px 12px var(--gold-glow);
+  transition: transform 0.1s ease, opacity 0.15s ease;
+  touch-action: manipulation;
+}
+
+.spinButton:active {
+  transform: scale(0.97);
+}
+
+.disabled {
+  opacity: 0.4;
+  cursor: default;
+  box-shadow: none;
+}
+
+.disabled:active {
+  transform: none;
+}
