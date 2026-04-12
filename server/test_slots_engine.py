@@ -144,3 +144,156 @@ class TestHandleSpin(unittest.TestCase):
         events = self.engine.handle_spin(self.room, "p0")
         types = [e["type"] for e in events]
         self.assertIn("slots_round_result", types)
+
+
+class TestAdvanceRound(unittest.TestCase):
+    def setUp(self):
+        self.engine = SlotsEngine()
+        self.room = make_slots_room(2, total_rounds=3, bet_per_round=100)
+        self.engine.start_game(self.room)
+
+    @patch("slots_engine.generate_spin")
+    def test_advance_increments_round(self, mock_spin):
+        mock_spin.return_value = [CHERRY, LEMON, BELL]
+        self.engine.handle_spin(self.room, "p0")
+        self.engine.handle_spin(self.room, "p1")
+        events = self.engine.advance_round(self.room)
+        self.assertEqual(self.room.current_round, 2)
+        self.assertEqual(self.room.phase, "spinning")
+
+    @patch("slots_engine.generate_spin")
+    def test_advance_resets_round_state(self, mock_spin):
+        mock_spin.return_value = [CHERRY, LEMON, BELL]
+        self.engine.handle_spin(self.room, "p0")
+        self.engine.handle_spin(self.room, "p1")
+        self.engine.advance_round(self.room)
+        for p in self.room.players.values():
+            self.assertFalse(p.has_spun)
+            self.assertIsNone(p.current_spin)
+            self.assertEqual(p.round_score, 0)
+            self.assertGreater(p.total_score, 0)
+
+    @patch("slots_engine.generate_spin")
+    def test_advance_returns_round_started_event(self, mock_spin):
+        mock_spin.return_value = [CHERRY, LEMON, BELL]
+        self.engine.handle_spin(self.room, "p0")
+        self.engine.handle_spin(self.room, "p1")
+        events = self.engine.advance_round(self.room)
+        self.assertEqual(events[0]["type"], "slots_round_started")
+        self.assertEqual(events[0]["current_round"], 2)
+
+    def test_advance_rejects_wrong_phase(self):
+        with self.assertRaises(ValueError):
+            self.engine.advance_round(self.room)
+
+
+class TestEndGame(unittest.TestCase):
+    def setUp(self):
+        self.engine = SlotsEngine()
+
+    @patch("slots_engine.generate_spin")
+    def test_winner_gets_pot_minus_house_edge(self, mock_spin):
+        room = make_slots_room(2, total_rounds=1, bet_per_round=100)
+        self.engine.start_game(room)
+        mock_spin.return_value = [JACKPOT, JACKPOT, JACKPOT]
+        self.engine.handle_spin(room, "p0")
+        mock_spin.return_value = [CHERRY, LEMON, BELL]
+        events = self.engine.handle_spin(room, "p1")
+        game_ended = [e for e in events if e["type"] == "slots_game_ended"]
+        self.assertEqual(len(game_ended), 1)
+        end_evt = game_ended[0]
+        self.assertEqual(end_evt["pot"], 200)
+        self.assertEqual(end_evt["winner_payout"], 184)
+        self.assertEqual(end_evt["winner_id"], "p0")
+        self.assertEqual(end_evt["payout_type"], "winner")
+        self.assertFalse(end_evt["is_tie"])
+
+    @patch("slots_engine.generate_spin")
+    def test_tie_refunds_buy_in(self, mock_spin):
+        room = make_slots_room(2, total_rounds=1, bet_per_round=100)
+        self.engine.start_game(room)
+        mock_spin.return_value = [CHERRY, CHERRY, CHERRY]
+        self.engine.handle_spin(room, "p0")
+        mock_spin.return_value = [CHERRY, CHERRY, CHERRY]
+        events = self.engine.handle_spin(room, "p1")
+        game_ended = [e for e in events if e["type"] == "slots_game_ended"]
+        end_evt = game_ended[0]
+        self.assertTrue(end_evt["is_tie"])
+        self.assertEqual(end_evt["payout_type"], "refund")
+        self.assertIsNone(end_evt["winner_id"])
+
+    @patch("slots_engine.generate_spin")
+    def test_final_standings_sorted(self, mock_spin):
+        room = make_slots_room(3, total_rounds=1, bet_per_round=100)
+        self.engine.start_game(room)
+        mock_spin.return_value = [CHERRY, LEMON, BELL]
+        self.engine.handle_spin(room, "p0")
+        mock_spin.return_value = [JACKPOT, JACKPOT, JACKPOT]
+        self.engine.handle_spin(room, "p1")
+        mock_spin.return_value = [BELL, BELL, BELL]
+        events = self.engine.handle_spin(room, "p2")
+        game_ended = [e for e in events if e["type"] == "slots_game_ended"]
+        standings = game_ended[0]["final_standings"]
+        scores = [s["total_score"] for s in standings]
+        self.assertEqual(scores, sorted(scores, reverse=True))
+
+    @patch("slots_engine.generate_spin")
+    def test_phase_is_final_result(self, mock_spin):
+        room = make_slots_room(2, total_rounds=1, bet_per_round=100)
+        self.engine.start_game(room)
+        mock_spin.return_value = [CHERRY, LEMON, BELL]
+        self.engine.handle_spin(room, "p0")
+        self.engine.handle_spin(room, "p1")
+        self.assertEqual(room.phase, "final_result")
+
+
+class TestReturnToLobby(unittest.TestCase):
+    def setUp(self):
+        self.engine = SlotsEngine()
+
+    @patch("slots_engine.generate_spin")
+    def test_resets_to_lobby(self, mock_spin):
+        room = make_slots_room(2, total_rounds=1, bet_per_round=100)
+        self.engine.start_game(room)
+        mock_spin.return_value = [CHERRY, LEMON, BELL]
+        self.engine.handle_spin(room, "p0")
+        self.engine.handle_spin(room, "p1")
+        events = self.engine.return_to_lobby(room)
+        self.assertEqual(room.phase, "lobby")
+        self.assertEqual(room.current_round, 0)
+        self.assertEqual(events[0]["type"], "slots_returned_to_lobby")
+
+    @patch("slots_engine.generate_spin")
+    def test_resets_player_scores(self, mock_spin):
+        room = make_slots_room(2, total_rounds=1, bet_per_round=100)
+        self.engine.start_game(room)
+        mock_spin.return_value = [CHERRY, LEMON, BELL]
+        self.engine.handle_spin(room, "p0")
+        self.engine.handle_spin(room, "p1")
+        self.engine.return_to_lobby(room)
+        for p in room.players.values():
+            self.assertEqual(p.total_score, 0)
+            self.assertFalse(p.has_spun)
+
+
+class TestGetRoomState(unittest.TestCase):
+    def setUp(self):
+        self.engine = SlotsEngine()
+
+    def test_lobby_state(self):
+        room = make_slots_room(2)
+        state = self.engine.get_room_state(room)
+        self.assertEqual(state["phase"], "lobby")
+        self.assertIn("p0", state["player_states"])
+        self.assertIn("p1", state["player_states"])
+
+    @patch("slots_engine.generate_spin")
+    def test_spinning_state_includes_spin_data(self, mock_spin):
+        room = make_slots_room(2, total_rounds=3, bet_per_round=100)
+        self.engine.start_game(room)
+        mock_spin.return_value = [CHERRY, CHERRY, CHERRY]
+        self.engine.handle_spin(room, "p0")
+        state = self.engine.get_room_state(room)
+        self.assertTrue(state["player_states"]["p0"]["has_spun"])
+        self.assertFalse(state["player_states"]["p1"]["has_spun"])
+        self.assertEqual(state["current_round"], 1)

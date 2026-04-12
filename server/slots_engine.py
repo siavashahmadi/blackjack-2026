@@ -187,6 +187,43 @@ class SlotsEngine:
             }
         ]
 
+    def advance_round(self, room: SlotsRoom) -> list[dict]:
+        """Increment round counter, reset per-round state, transition to spinning."""
+        if room.phase != "round_result":
+            raise ValueError("Can only advance from round_result phase")
+
+        room.current_round += 1
+        room.phase = "spinning"
+
+        for player in room.players.values():
+            if player.connected:
+                reset_slots_round_state(player)
+
+        return [
+            {
+                "type": "slots_round_started",
+                "current_round": room.current_round,
+                "total_rounds": room.total_rounds,
+                "state": self.get_room_state(room),
+            }
+        ]
+
+    def return_to_lobby(self, room: SlotsRoom) -> list[dict]:
+        """Reset all game state and return to lobby for rematch."""
+        room.phase = "lobby"
+        room.current_round = 0
+
+        for player in room.players.values():
+            player.total_score = 0
+            reset_slots_round_state(player)
+
+        return [
+            {
+                "type": "slots_returned_to_lobby",
+                "state": self.get_room_state(room),
+            }
+        ]
+
     def get_room_state(self, room: SlotsRoom) -> dict:
         """Serialize full room state for broadcast/reconnection."""
         connected = [p for p in room.players.values() if p.connected]
