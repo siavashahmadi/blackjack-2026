@@ -1,0 +1,48 @@
+.soloSlots {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.table {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 16px;
+  min-height: 0;
+}
+
+.betDisplay {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gold);
+  text-align: center;
+  min-height: 24px;
+}
+
+.controlsArea {
+  flex: 0 0 auto;
+  height: var(--controls-area-height);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  position: relative;
+  z-index: 2;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.phaseContent {
+  animation: controlsFadeIn 0.15s ease-out;
+}
+
+@keyframes controlsFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
