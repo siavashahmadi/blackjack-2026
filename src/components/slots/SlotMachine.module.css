@@ -1,0 +1,54 @@
+.machine {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 2px solid var(--gold-dim);
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 0 20px rgba(240, 200, 80, 0.1),
+    inset 0 0 30px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.matchLabel {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  padding: 4px 16px;
+  border-radius: 8px;
+  white-space: nowrap;
+  animation: matchPop 0.4s ease-out;
+  z-index: 2;
+}
+
+.triple {
+  color: var(--felt-dark);
+  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  box-shadow: 0 2px 12px var(--gold-glow);
+}
+
+.pair {
+  color: #fff;
+  background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+  box-shadow: 0 2px 12px rgba(155, 89, 182, 0.4);
+}
+
+@keyframes matchPop {
+  0% {
+    transform: translateX(-50%) scale(0.5);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(-50%) scale(1.15);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
