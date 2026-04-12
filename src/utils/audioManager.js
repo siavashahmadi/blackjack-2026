@@ -278,6 +278,63 @@ const sounds = {
     playTone(262, 0.2, 'sawtooth', 0.06, 0.15) // C4
     playTone(196, 0.3, 'sawtooth', 0.08, 0.3)  // G3 (sustained, deeper)
   },
+
+  // Slot reel stop — mechanical thud
+  slot_stop() {
+    playNoise(0.08, 'lowpass', 200, 1, 0.4)
+    playNoise(0.03, 'bandpass', 800, 5, 0.2)
+  },
+
+  // Slot win — ascending chime C5→E5→G5
+  slot_win() {
+    const notes = [523.25, 659.25, 783.99]
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.value = freq
+      const now = ctx.currentTime + i * 0.12
+      gain.gain.setValueAtTime(0.15, now)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3)
+      osc.connect(gain).connect(ctx.destination)
+      osc.start(now)
+      osc.stop(now + 0.3)
+    })
+  },
+
+  // Slot jackpot — extended arpeggio C5→E5→G5→C6→E6→G6
+  slot_jackpot() {
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98]
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.value = freq
+      const now = ctx.currentTime + i * 0.1
+      gain.gain.setValueAtTime(0.15, now)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4)
+      osc.connect(gain).connect(ctx.destination)
+      osc.start(now)
+      osc.stop(now + 0.4)
+    })
+  },
+
+  // Slot pair — two quick tones
+  slot_pair() {
+    const notes = [587.33, 783.99]
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.value = freq
+      const now = ctx.currentTime + i * 0.1
+      gain.gain.setValueAtTime(0.12, now)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2)
+      osc.connect(gain).connect(ctx.destination)
+      osc.start(now)
+      osc.stop(now + 0.2)
+    })
+  },
 }
 
 const audioManager = {
