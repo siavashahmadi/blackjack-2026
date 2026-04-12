@@ -88,3 +88,26 @@
   font-size: 13px;
   color: var(--text-dim);
 }
+
+.backButton {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 16px;
+  letter-spacing: 1px;
+  transition: color 0.2s ease;
+  touch-action: manipulation;
+}
+
+.backButton:active {
+  color: var(--text-primary);
+}
+
+.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
