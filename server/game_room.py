@@ -83,10 +83,16 @@ rooms: dict[str, GameRoom] = {}
 
 
 def generate_room_code(length: int = 4) -> str:
-    """Generate a unique 4-character room code."""
+    """Generate a unique 4-character room code.
+
+    Checks both blackjack and slots room registries for collisions.
+    """
+    # Import here to avoid circular import
+    from slots_room import slots_rooms
+
     for _ in range(100):
         code = "".join(secrets.choice(ROOM_CODE_CHARS) for _ in range(length))
-        if code not in rooms:
+        if code not in rooms and code not in slots_rooms:
             return code
     # Extremely unlikely fallback: extend to 5 characters
     return "".join(secrets.choice(ROOM_CODE_CHARS) for _ in range(length + 1))
