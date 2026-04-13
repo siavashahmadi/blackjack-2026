@@ -1412,11 +1412,12 @@ async def handle_configure_slots(player_id: str, message: dict):
             return
         room.total_rounds = total_rounds
 
+    VALID_BETS = [100, 500, 1000, 5000]
     bet_per_round = message.get("bet_per_round")
     if bet_per_round is not None:
-        if not isinstance(bet_per_round, int) or bet_per_round <= 0:
+        if isinstance(bet_per_round, bool) or bet_per_round not in VALID_BETS:
             await manager.send_to_player(
-                player_id, {"type": "error", "message": "Invalid bet amount"}
+                player_id, {"type": "error", "message": f"Bet must be one of {VALID_BETS}"}
             )
             return
         room.bet_per_round = bet_per_round

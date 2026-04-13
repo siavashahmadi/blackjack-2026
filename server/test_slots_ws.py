@@ -156,14 +156,14 @@ class TestSlotsWebSocket(unittest.TestCase):
                 ws1.send_text(json.dumps({
                     "type": "configure_slots",
                     "total_rounds": 10,
-                    "bet_per_round": 200,
+                    "bet_per_round": 500,
                 }))
                 alice_cfg = json.loads(ws1.receive_text())
                 self.assertEqual(alice_cfg["type"], "slots_configured")
                 bob_cfg = json.loads(ws2.receive_text())
                 self.assertEqual(bob_cfg["type"], "slots_configured")
                 self.assertEqual(bob_cfg["total_rounds"], 10)
-                self.assertEqual(bob_cfg["bet_per_round"], 200)
+                self.assertEqual(bob_cfg["bet_per_round"], 500)
 
     # ------------------------------------------------------------------
     # Starting the game

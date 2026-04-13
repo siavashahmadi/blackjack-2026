@@ -149,6 +149,21 @@ class SlotsEngine:
             {"player_id": p.player_id, "name": p.name, "total_score": p.total_score}
             for p in sorted_players
         ]
+        if not sorted_players:
+            return [
+                {
+                    "type": "slots_game_ended",
+                    "final_standings": [],
+                    "pot": pot,
+                    "buy_in": buy_in,
+                    "is_tie": True,
+                    "payout_type": "refund",
+                    "winner_id": None,
+                    "winner_payout": buy_in,
+                    "house_cut": 0,
+                    "state": self.get_room_state(room),
+                }
+            ]
         top_score = sorted_players[0].total_score
         tied_at_top = [p for p in sorted_players if p.total_score == top_score]
 
