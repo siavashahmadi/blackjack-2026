@@ -1,22 +1,13 @@
-import { useReducer, useRef, useCallback, useMemo, useState, useEffect } from 'react'
+import { useReducer, useRef, useMemo, useEffect } from 'react'
 import { gameReducer } from '../reducer/gameReducer'
 import { createInitialState } from '../reducer/initialState'
 import { createDeck, shuffle, cardValue } from '../utils/cardUtils'
 import { sumChipStack } from '../utils/chipUtils'
-import { drawFromDeck } from '../utils/deckUtils'
 import { TABLE_LEVELS } from '../constants/tableLevels'
 import { getDealerForLevel } from '../constants/dealers'
-import audioManager from '../utils/audioManager'
 import {
-  addChip, selectChip, deal, hit, doubleDown, split, betAsset, removeAsset,
-  takeLoan, newRound, resetGame,
-  UNDO_CHIP, CLEAR_CHIPS, ALL_IN, STAND,
-  TOGGLE_ASSET_MENU, DISMISS_LOAN_SHARK, TOGGLE_ACHIEVEMENTS, DISMISS_ACHIEVEMENT,
-  TOGGLE_MUTE, TOGGLE_NOTIFICATIONS, TOGGLE_DEBT_TRACKER, TOGGLE_HAND_HISTORY, DISMISS_TABLE_TOAST, TOGGLE_SETTINGS, TOGGLE_ACHIEVEMENTS_ENABLED, TOGGLE_DD_FACE_DOWN,
-  ACCEPT_TABLE_UPGRADE, DECLINE_TABLE_UPGRADE, DISMISS_COMP,
-  TOGGLE_SIDE_BETS,
-  placeSideBet, removeSideBetChip, clearSideBet,
-  acceptDoubleOrNothing, declineDoubleOrNothing,
+  addChip, selectChip, betAsset,
+  UNDO_CHIP,
 } from '../reducer/actions'
 import { useDealerTurn } from '../hooks/useDealerTurn'
 import { useDealerMessage } from '../hooks/useDealerMessage'
@@ -28,6 +19,9 @@ import { useSessionPersistence } from '../hooks/useSessionPersistence'
 import { useChipInteraction } from '../hooks/useChipInteraction'
 import { useAssetConfirmation } from '../hooks/useAssetConfirmation'
 import { useDoubleOrNothing } from '../hooks/useDoubleOrNothing'
+import { useBettingActions } from '../hooks/useBettingActions'
+import { useGameActions } from '../hooks/useGameActions'
+import { useUIActions } from '../hooks/useUIActions'
 import Header from './Header'
 import BankrollDisplay from './BankrollDisplay'
 import DealerArea from './DealerArea'
@@ -100,120 +94,26 @@ function SoloGame({ onBack }) {
     return () => delete document.documentElement.dataset.table
   }, [state.tableLevel])
 
-  const handleDismissTableToast = useCallback(() => {
-    dispatch({ type: DISMISS_TABLE_TOAST })
-  }, [])
-  const handleAcceptUpgrade = useCallback(() => {
-    dispatch({ type: ACCEPT_TABLE_UPGRADE })
-  }, [])
-  const handleDeclineUpgrade = useCallback(() => {
-    dispatch({ type: DECLINE_TABLE_UPGRADE })
-  }, [])
-
-  const handleClear = useCallback(() => dispatch({ type: CLEAR_CHIPS }), [])
-  const handleAllIn = useCallback(() => {
-    audioManager.play('all_in')
-    dispatch({ type: ALL_IN })
-  }, [])
-
-  const handleDeal = useCallback(() => {
-    const { cards, deck, reshuffled } = drawFromDeck(stateRef.current.deck, 4)
-    dispatch(deal(cards, reshuffled ? deck : undefined))
-  }, [])
-
-  const handleHit = useCallback(() => {
-    const { cards, reshuffled, deck } = drawFromDeck(stateRef.current.deck, 1)
-    dispatch(reshuffled ? hit(null, [cards[0], ...deck]) : hit(cards[0]))
-  }, [])
-
-  const handleStand = useCallback(() => dispatch({ type: STAND }), [])
-
-  // Loan confirmation for split/double when player can't afford it
-  const [pendingLoanAction, setPendingLoanAction] = useState(null)
-
-  const handleDoubleDown = useCallback(() => {
-    const s = stateRef.current
-    const hand = s.playerHands[s.activeHandIndex]
-    if (hand && s.bankroll - hand.bet < 0 && !s.inDebtMode) {
-      setPendingLoanAction({ type: 'double' })
-      return
-    }
-    const { cards, reshuffled, deck } = drawFromDeck(s.deck, 1)
-    dispatch(reshuffled ? doubleDown(null, [cards[0], ...deck]) : doubleDown(cards[0]))
-  }, [])
-
-  const handleSplit = useCallback(() => {
-    const s = stateRef.current
-    const hand = s.playerHands[s.activeHandIndex]
-    if (hand && s.bankroll - hand.bet < 0 && !s.inDebtMode) {
-      setPendingLoanAction({ type: 'split' })
-      return
-    }
-    const { cards, reshuffled, deck } = drawFromDeck(s.deck, 2)
-    dispatch(reshuffled ? split(null, [cards[0], cards[1], ...deck]) : split(cards))
-  }, [])
-
-  const handleConfirmLoan = useCallback(() => {
-    const deck = stateRef.current.deck
-    dispatch(takeLoan())
-    if (pendingLoanAction?.type === 'double') {
-      const { cards, reshuffled, deck: remaining } = drawFromDeck(deck, 1)
-      dispatch(reshuffled ? doubleDown(null, [cards[0], ...remaining]) : doubleDown(cards[0]))
-    } else if (pendingLoanAction?.type === 'split') {
-      const { cards, reshuffled, deck: remaining } = drawFromDeck(deck, 2)
-      dispatch(reshuffled ? split(null, [cards[0], cards[1], ...remaining]) : split(cards))
-    }
-    setPendingLoanAction(null)
-  }, [pendingLoanAction])
-
-  const handleCancelLoan = useCallback(() => setPendingLoanAction(null), [])
-
-  const handleNewRound = useCallback(() => dispatch(newRound(shuffle(createDeck()))), [])
-  const handleReset = useCallback(() => {
-    if (stateRef.current.handsPlayed > 0) {
-      if (!window.confirm('Start a new game? Current progress will be lost.')) return
-    }
-    dispatch(resetGame(shuffle(createDeck())))
-  }, [])
-  const handleBack = useCallback(() => {
-    if (stateRef.current.handsPlayed > 0) {
-      if (!window.confirm('Return to menu? Current progress will be lost.')) return
-    }
-    onBack()
-  }, [onBack])
+  const { handleClear, handleAllIn, handleDeal } = useBettingActions(dispatch, stateRef)
+  const {
+    pendingLoanAction,
+    handleHit, handleStand, handleDoubleDown, handleSplit,
+    handleConfirmLoan, handleCancelLoan,
+    handleNewRound, handleReset, handleBack,
+  } = useGameActions(dispatch, stateRef, onBack)
+  const {
+    handleDismissTableToast, handleAcceptUpgrade, handleDeclineUpgrade,
+    handleRemoveAsset, handleToggleAssetMenu, handleTakeLoan,
+    handleDismissLoanShark, handleDismissComp,
+    handleDonAccept, handleDonDecline,
+    handleToggleAchievements, handleToggleDebtTracker, handleToggleHandHistory,
+    handleDismissAchievement, handleToggleMute, handleToggleNotifications,
+    handleToggleSettings, handleToggleAchievementsEnabled, handleToggleDdFaceDown,
+    handlePlaceSideBet, handleRemoveSideBetChip, handleClearSideBet, handleToggleSideBets,
+  } = useUIActions(dispatch, stateRef)
 
   const { pendingAssetConfirm, handleBetAsset, handleConfirmAsset, handleCancelAsset } =
     useAssetConfirmation(dispatch, betAsset)
-
-  const handleRemoveAsset = useCallback((assetId) => dispatch(removeAsset(assetId)), [])
-  const handleToggleAssetMenu = useCallback(() => dispatch({ type: TOGGLE_ASSET_MENU }), [])
-  const handleTakeLoan = useCallback(() => dispatch(takeLoan()), [])
-  const handleDismissLoanShark = useCallback(() => dispatch({ type: DISMISS_LOAN_SHARK }), [])
-  const handleDismissComp = useCallback(() => dispatch({ type: DISMISS_COMP }), [])
-  const handleDonAccept = useCallback((won) => dispatch(acceptDoubleOrNothing(won)), [])
-  const handleDonDecline = useCallback(() => dispatch(declineDoubleOrNothing()), [])
-  const handleToggleAchievements = useCallback(() => dispatch({ type: TOGGLE_ACHIEVEMENTS }), [])
-  const handleToggleDebtTracker = useCallback(() => dispatch({ type: TOGGLE_DEBT_TRACKER }), [])
-  const handleToggleHandHistory = useCallback(() => dispatch({ type: TOGGLE_HAND_HISTORY }), [])
-  const handleDismissAchievement = useCallback(() => dispatch({ type: DISMISS_ACHIEVEMENT }), [])
-  const handleToggleMute = useCallback(() => dispatch({ type: TOGGLE_MUTE }), [])
-  const handleToggleNotifications = useCallback(() => dispatch({ type: TOGGLE_NOTIFICATIONS }), [])
-  const handleToggleSettings = useCallback(() => dispatch({ type: TOGGLE_SETTINGS }), [])
-  const handleToggleAchievementsEnabled = useCallback(() => dispatch({ type: TOGGLE_ACHIEVEMENTS_ENABLED }), [])
-  const handleToggleDdFaceDown = useCallback(() => dispatch({ type: TOGGLE_DD_FACE_DOWN }), [])
-  const handlePlaceSideBet = useCallback(
-    (betType) => dispatch(placeSideBet(betType, stateRef.current.selectedChipValue)),
-    []
-  )
-  const handleRemoveSideBetChip = useCallback(
-    (betType) => dispatch(removeSideBetChip(betType, stateRef.current.selectedChipValue)),
-    []
-  )
-  const handleClearSideBet = useCallback(
-    (betType) => dispatch(clearSideBet(betType)),
-    []
-  )
-  const handleToggleSideBets = useCallback(() => dispatch({ type: TOGGLE_SIDE_BETS }), [])
 
   // --- Derived state ---
   const currentBetTotal = useMemo(() =>
