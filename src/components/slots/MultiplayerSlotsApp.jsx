@@ -22,7 +22,6 @@ function MultiplayerSlotsApp({ onBack }) {
       <MultiplayerSlots
         state={state}
         send={send}
-        dispatch={dispatch}
         onLeave={handleLeave}
       />
     )

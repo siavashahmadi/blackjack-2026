@@ -5,7 +5,7 @@ import SlotMachine from './SlotMachine'
 import ScoreBar from './ScoreBar'
 import styles from './MultiplayerSlots.module.css'
 
-function MultiplayerSlots({ state, send, dispatch, onLeave }) {
+function MultiplayerSlots({ state, send, onLeave }) {
   const myState = state.playerStates[state.playerId] || {}
   const myReels = myState.reels || null
   const myHasSpun = myState.hasSpun || myState.has_spun || false

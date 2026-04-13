@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { slotsBattleReducer, SLOTS_BATTLE_SET_NAME, SLOTS_BATTLE_CLEAR_ERROR, SLOTS_BATTLE_FORCE_LEAVE, SLOTS_BATTLE_TOGGLE_MUTE } from '../slotsBattleReducer'
-import { slotsBattleInitialState, createSlotsBattleInitialState } from '../slotsBattleInitialState'
+import { createSlotsBattleInitialState } from '../slotsBattleInitialState'
 
 function makeState(overrides = {}) {
   return { ...createSlotsBattleInitialState(), ...overrides }
