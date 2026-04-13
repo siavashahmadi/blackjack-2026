@@ -1,0 +1,344 @@
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  gap: 16px;
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.leaveButton {
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  padding: 8px 12px;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.roundInfo {
+  text-align: center;
+}
+
+.roundLabel {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+}
+
+.potDisplay {
+  text-align: right;
+}
+
+.potLabel {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.potAmount {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.machineArea {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.spinButton {
+  width: 100%;
+  max-width: 280px;
+  padding: 16px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dim) 100%);
+  color: var(--felt-dark);
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: transform 0.1s;
+  touch-action: manipulation;
+}
+
+.spinButton:active {
+  transform: scale(0.97);
+}
+
+.waitingMessage {
+  font-size: 14px;
+  color: var(--text-dim);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.playerStatusList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.playerStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.playerStatusName {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.playerStatusReady {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.playerStatusWaiting {
+  color: var(--text-dim);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.roundResultSection {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.roundResultTitle {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text-primary);
+  letter-spacing: 2px;
+}
+
+.roundResultList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roundResultItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.roundResultName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.roundResultNameSelf {
+  color: var(--gold);
+}
+
+.roundResultScores {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.roundResultRoundScore {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.roundResultTotalScore {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.roundResultMatch {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.matchTriple {
+  color: var(--gold);
+  background: rgba(240, 200, 80, 0.15);
+}
+
+.matchPair {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nextRoundHint {
+  font-size: 13px;
+  color: var(--text-dim);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.finalSection {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding-top: 16px;
+}
+
+.finalHeadline {
+  font-family: 'Playfair Display', serif;
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-align: center;
+}
+
+.headlineWin {
+  color: var(--gold);
+  text-shadow: 0 2px 16px var(--gold-glow);
+}
+
+.headlineLose {
+  color: var(--danger);
+}
+
+.headlineTie {
+  color: var(--text-primary);
+}
+
+.finalSubtext {
+  font-size: 14px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.payoutInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.payoutLabel {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+
+.payoutAmount {
+  font-family: 'Outfit', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.standingsTable {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.standingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.standingRank {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+  min-width: 24px;
+}
+
+.standingRankFirst {
+  color: var(--gold);
+}
+
+.standingName {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-left: 8px;
+}
+
+.standingScore {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.playAgainButton {
+  width: 100%;
+  max-width: 280px;
+  padding: 16px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dim) 100%);
+  color: var(--felt-dark);
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: transform 0.1s;
+  touch-action: manipulation;
+}
+
+.playAgainButton:active {
+  transform: scale(0.97);
+}
+
+.leaveEndButton {
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  padding: 8px 12px;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
