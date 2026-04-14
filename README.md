@@ -166,7 +166,7 @@ When a player splits, they get multiple hands with an `activeHandIndex` tracking
 User Event (tap chip, hit, stand)
          |
          v
-  SoloGame.jsx handler (useCallback)
+  SoloGame.jsx handler (via useBettingActions / useGameActions / useUIActions)
          |
          +-- Direct sound (chip tap -> audioManager.play)
          |
@@ -579,12 +579,20 @@ blackjack/
 │   ├── App.jsx                            # Root: mode select -> Solo or Multiplayer
 │   ├── App.module.css
 │   ├── reducer/
-│   │   ├── gameReducer.js                 # Solo: pure state machine, ~26 action types
+│   │   ├── gameReducer.js                 # Thin dispatcher: chains sub-reducers via ??
+│   │   ├── bettingReducer.js              # Betting-phase actions (ADD_CHIP, ALL_IN, side bets)
+│   │   ├── playReducer.js                 # Play-phase actions (DEAL, HIT, STAND, SPLIT, etc.)
+│   │   ├── resolveReducer.js              # Resolution actions (RESOLVE_HAND, NEW_ROUND, etc.)
+│   │   ├── uiReducer.js                   # UI toggles (TOGGLE_*, DISMISS_*, SET_*, LOAD_*)
+│   │   ├── reducerHelpers.js              # Shared helpers (computeVig, activeHand, splits, etc.)
 │   │   ├── initialState.js                # Solo: state factory ($10K bankroll, fresh deck)
 │   │   ├── actions.js                     # Solo: action type constants + creators
 │   │   ├── multiplayerReducer.js          # Multi: processes SERVER_* events + local UI
 │   │   └── multiplayerInitialState.js     # Multi: disconnected state factory
 │   ├── hooks/
+│   │   ├── useBettingActions.js           # Solo: betting callbacks (clear, all-in, deal)
+│   │   ├── useGameActions.js              # Solo: gameplay callbacks (hit, stand, double, split)
+│   │   ├── useUIActions.js                # Solo: UI toggle/dismiss callbacks
 │   │   ├── useDealerTurn.js               # Solo: dealer card draws + hand resolution
 │   │   ├── useDealerMessage.js            # Solo: trash talk line selection + dispatch
 │   │   ├── useAchievements.js             # Solo: achievement checks + localStorage sync
@@ -644,10 +652,16 @@ blackjack/
 │       ├── theme.css                      # CSS variables, felt texture, base reset
 │       └── animations.css                 # @keyframes for cards, chips, toasts
 ├── server/
-│   ├── main.py                            # FastAPI app, WebSocket endpoint, connection manager
+│   ├── main.py                            # FastAPI app, WebSocket endpoint, message router
+│   ├── connection.py                      # ConnectionManager, shared state, constants, background loops
+│   ├── blackjack_handlers.py              # Blackjack game handlers, timers, dealer turn logic
+│   ├── slots_handlers.py                  # Slots game handlers, spin timers, round scheduling
 │   ├── game_logic.py                      # GameEngine: all game rules, dealer turn, resolution
 │   ├── game_room.py                       # GameRoom + PlayerState dataclasses, room management
 │   ├── card_engine.py                     # Deck creation, shuffle, hand_value, is_soft
+│   ├── slots_engine.py                    # SlotsEngine: reel spinning, payout calculation
+│   ├── slots_room.py                      # SlotsRoom + SlotsPlayerState dataclasses
+│   ├── slots_constants.py                 # Slots symbols, paytable, reel strips
 │   ├── constants.py                       # Server-side game config, assets, vig tiers, chat
 │   ├── test_game.py                       # Comprehensive game logic tests
 │   ├── test_ws.py                         # WebSocket integration tests

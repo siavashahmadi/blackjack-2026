@@ -54,12 +54,20 @@ The dealer turn is animated outside the reducer via a `useDealerTurn` hook that 
 src/
   App.jsx                         # Router: ModeSelect → SoloGame | Lobby → MultiplayerGame
   reducer/
-    gameReducer.js    (~632 lines) # Solo game state machine — all state transitions
+    gameReducer.js    (~34 lines)  # Thin dispatcher — chains sub-reducers via ?? (nullish coalescing)
+    reducerHelpers.js (~101 lines) # Shared helpers: computeVig, advanceToNextHand, etc.
+    bettingReducer.js (~110 lines) # ADD_CHIP, UNDO_CHIP, CLEAR_CHIPS, ALL_IN, side bets
+    playReducer.js    (~307 lines) # DEAL, HIT, STAND, DOUBLE_DOWN, SPLIT, DEALER_DRAW, TAKE_LOAN
+    resolveReducer.js (~333 lines) # RESOLVE_HAND, double-or-nothing, NEW_ROUND, RESET_GAME, table upgrades
+    uiReducer.js      (~105 lines) # All TOGGLE_*, DISMISS_*, LOAD_*, SET_* actions
     initialState.js   (~87 lines)  # createInitialState(), createHandObject(), initialState
-    actions.js        (~60 lines)  # 25 action type constants + 15 action creators
+    actions.js        (~87 lines)  # 46 action type constants + action creators
     multiplayerReducer.js (~500 lines) # Multiplayer state machine
     multiplayerInitialState.js     # Multiplayer initial state (19 properties)
   hooks/
+    useBettingActions.js (~20 lines)  # Betting callbacks: handleClear, handleAllIn, handleDeal
+    useGameActions.js  (~84 lines)    # Play callbacks: handleHit, handleStand, handleDoubleDown, handleSplit, loan confirm/cancel, newRound, reset, back
+    useUIActions.js    (~82 lines)    # UI toggle callbacks: all dismiss/toggle/side-bet handlers
     useDealerTurn.js  (~66 lines)  # Dealer card drawing: 600ms between cards, 400ms before resolve
     useDealerMessage.js (~153 lines) # Dealer trash talk selection from 20 categories
     useAchievements.js (~158 lines)  # Achievement checking + localStorage persistence
@@ -69,7 +77,7 @@ src/
     useWebSocket.js   (~207 lines) # WebSocket connection + exponential backoff reconnection
     useSessionPersistence.js (~74 lines) # localStorage save/load for settings
   components/ (46 files, ~2,800 lines total)
-    SoloGame.jsx      (~435 lines) # Main solo container — reducer + all hooks
+    SoloGame.jsx      (~405 lines) # Main solo container — reducer + hooks + render tree
     ModeSelect.jsx                 # Initial mode picker (solo / multiplayer)
     Lobby.jsx         (~254 lines) # Multiplayer lobby — create/join rooms
     MultiplayerGame.jsx (~320 lines) # Multiplayer game container
@@ -120,7 +128,10 @@ src/
     theme.css         # CSS variables, felt texture, global styles, font families
     animations.css    # @keyframes for dealing, flying chips, shake, toasts
 server/
-  main.py            # FastAPI app, WebSocket handler, message routing
+  main.py            (~220 lines) # FastAPI app setup, WebSocket endpoint, message router (thin shell)
+  connection.py      (~220 lines) # ConnectionManager, shared state, constants, background loops
+  blackjack_handlers.py (~995 lines) # All blackjack handlers, turn/bet timers, dealer turn logic
+  slots_handlers.py  (~442 lines) # All slots handlers, slots timers, slots broadcast
   game_logic.py      # GameEngine — rules, resolution, serialization
   game_room.py       # GameRoom/PlayerState dataclasses
   card_engine.py     # Server-side deck/card utilities
